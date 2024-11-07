@@ -1,0 +1,14 @@
+allow from all
+
+#php_flag display_startup_errors off
+#php_flag display_errors off
+
+#<FilesMatch ".php$">
+#AddHandler x-httpd-php54 .php
+#</FilesMatch>
+
+
+RewriteEngine on
+
+RewriteRule ^([a-z]+)/([a-z]+)$			index.php?class=$1&method=$2 [NC,L]
+RewriteRule ^online$					online.php [NC,L]

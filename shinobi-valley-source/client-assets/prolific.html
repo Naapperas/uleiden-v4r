@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Game Experiment</title>
+  <meta name="robots" content="noindex" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <link rel="stylesheet" href="css/uikit.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+
+
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,700" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="js/uikit.min.js"></script>
+  <script src="js/uikit-icons.min.js"></script>
+
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+</head>
+
+<body>
+
+  <div class="uk-container uk-container-center uk-margin-large-top uk-margin-large-bottom uk-position-relative">
+    <div id="loadblock"></div>
+
+
+    <h1 class="uk-heading-small uk-heading-divider">Welcome to the "Shinobi Valley" Experiment</h1>
+    <p>
+      Dear Prolific participant,<br>
+      <br>
+      We investigate the impact of game elements on the gameplay experience. Participants play a 3D video game (10-15 minutes) and answer survey questions about it. The game does not feature any acts of violence or controversial topics and should be playable by anyone.
+    </p>
+    <p>
+      <strong>Playing requires the use of a computer mouse. For technical
+        reasons, the game does not operate on smartphones or tablets. We recommend to use headphones!</strong>
+    </p>
+    <p>After the game you will be redirected to a survey. At the end of the survey, a link will be presented to you to complete your participation through Prolific.
+    </p>
+
+
+
+
+
+
+    <div id="webglwarning" class="uk-alert-danger" uk-alert>
+      <p><span uk-icon="icon: warning; ratio: 1.2" class="uk-margin-small-right"></span> The game experiment requires a
+        recent browser with <strong>activated WebGL2</strong> to load!</p>
+
+
+    </div>
+
+    <div id="viewportwarning" class="uk-alert-danger" uk-alert>
+      <p><span uk-icon="icon: warning; ratio: 1.2" class="uk-margin-small-right"></span> The experiment needs to
+        run in a window that is at least <strong>1300 by 780 pixel</strong> (yours is <span id=widthdisplay></span> by
+        <span id=heightdisplay></span> pixel).<p>
+
+        </p><strong>Maximize your browser window,</strong> or
+        visit this page on a device with higher resolution if your window is already maximized.</p>
+    </div>
+
+
+    <div id="gotogame" style="display: none;">
+
+      <p>
+        <em>Once you have started the experiment, make sure to complete it in one sitting, without restarting it.</em>
+      </p>
+      <p>
+        <a id="surveylinkbutton" class="uk-button uk-button-primary"
+          href="http://research.dandyus.com/shinobivalley/game.html?typeid=PROLIFIC">Begin Experiment</a>
+      </p>
+
+    </div>
+
+
+
+  </div>
+
+
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const proid = urlParams.get('PROID')
+
+    var surveyurl = "http://research.dandyus.com/shinobivalley/game.html?typeid=PROLIFIC";
+
+
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) {
+      if (typeof WebGL2RenderingContext !== 'undefined') {
+        console.log('Browser appears to support WebGL2 but it might be disabled. Try updating your OS and/or video card drivers');
+      } else {
+        console.log('Browser has no WebGL2 support at all');
+      }
+    }
+
+    if (proid.length > 1) {
+      surveyurl = surveyurl + "&PROID=" + proid;
+      $('#surveylinkbutton').attr('href', surveyurl);
+    }
+
+    function isMinimumViewportSize() {
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+      console.log(`${width} x ${height}`);
+
+      if (width < 1280 || height < 720) {
+        $("#gotogame").hide();
+        $("#viewportwarning").show();
+        $("#widthdisplay").html(width);
+        $("#heightdisplay").html(height);
+
+
+        return false;
+      }
+
+      $("#viewportwarning").hide()
+      $("#gotogame").show()
+
+      return true;
+    }
+
+    $(window).on('load', function () {
+      $('#loadblock').fadeOut();
+
+      if (gl) {
+        $("#webglwarning").hide();
+        isMinimumViewportSize();
+      } else {
+        $("#viewportwarning").hide()
+      }
+
+
+    });
+
+    $(window).resize(function () {
+      if (!gl) {
+        $("#viewportwarning").hide()
+        return;
+      }
+      isMinimumViewportSize();
+    });
+
+  </script>
+</body>
+
+</html>

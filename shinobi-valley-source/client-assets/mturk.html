@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Game Experiment</title>
+  <meta name="robots" content="noindex" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <link rel="stylesheet" href="css/uikit.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+
+
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,700" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="js/uikit.min.js"></script>
+  <script src="js/uikit-icons.min.js"></script>
+
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+</head>
+
+<body>
+
+  <div class="uk-container uk-container-center uk-margin-large-top uk-margin-large-bottom uk-position-relative">
+    <div id="loadblock"></div>
+
+
+    <h1 class="uk-heading-small uk-heading-divider">Welcome to the "Shinobi Valley" Experiment</h1>
+    <p>
+      Dear MTurk participant,<br>
+      <br>
+      In this study we investigate the impact of individual game elements on the gameplay experience. You will play a
+      3D video game (10-15 minutes) and then answer survey questions about your experience. The game does not
+      feature any acts of violence or controversial topics and should be playable by anyone.
+    </p>
+    <p>
+      <strong>Playing requires the use of a computer mouse. For technical
+        reasons, the game does not operate on smartphones or tablets. We recommend to use headphones!</strong>
+    </p>
+    <p>In the experiment you will receive two IDs: a game and a survey ID. Both the game and the survey need
+        to be finished to complete the HIT for MTurk. <strong>Use the survey ID, shown at the end of the survey to confirm your
+        HIT.</strong>
+    </p>
+
+
+
+
+
+
+    <div id="webglwarning" class="uk-alert-danger" uk-alert>
+      <p><span uk-icon="icon: warning; ratio: 1.2" class="uk-margin-small-right"></span> The game experiment requires a
+        recent browser with <strong>activated WebGL2</strong> to load!</p>
+
+
+    </div>
+
+    <div id="viewportwarning" class="uk-alert-danger" uk-alert>
+      <p><span uk-icon="icon: warning; ratio: 1.2" class="uk-margin-small-right"></span> The experiment needs to
+        run in a window that is at least <strong>1300 by 780 pixel</strong> (yours is <span id=widthdisplay></span> by
+        <span id=heightdisplay></span> pixel).<p>
+
+        </p><strong>Maximize your browser window,</strong> or
+        visit this page on a device with higher resolution if your window is already maximized.</p>
+    </div>
+
+
+    <div id="gotogame" style="display: none;">
+
+      <p>
+        <em>We check results for signs of automated or inattentive responses and will reject HITs if the survey
+          responses show indications.</em>
+      </p>
+      <p>
+        <a class="uk-button uk-button-primary"
+          href="http://research.dandyus.com/shinobivalley/game.html?typeid=MTURK">Begin Experiment</a>
+      </p>
+
+    </div>
+
+
+
+  </div>
+
+
+
+  <script>
+
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) {
+      if (typeof WebGL2RenderingContext !== 'undefined') {
+        console.log('Browser appears to support WebGL2 but it might be disabled. Try updating your OS and/or video card drivers');
+      } else {
+        console.log('Browser has no WebGL2 support at all');
+      }
+    }
+
+    function isMinimumViewportSize() {
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+      console.log(`${width} x ${height}`);
+
+      if (width < 1310 || height < 780) {
+        $("#gotogame").hide();
+        $("#viewportwarning").show();
+        $("#widthdisplay").html(width);
+        $("#heightdisplay").html(height);
+
+
+        return false;
+      }
+
+      $("#viewportwarning").hide()
+      $("#gotogame").show()
+
+      return true;
+    }
+
+    $(window).on('load', function () {
+      $('#loadblock').fadeOut();
+
+      if (gl) {
+        $("#webglwarning").hide();
+        isMinimumViewportSize();
+      }
+
+
+    });
+
+    $(window).resize(function () {
+      if (!gl) return;
+      isMinimumViewportSize();
+    });
+
+  </script>
+</body>
+
+</html>

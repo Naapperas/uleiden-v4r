@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta charset="utf-8">
+  <title>Game Experiment</title>
+  <meta name="robots" content="noindex" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="css/uikit.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,700" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="js/uikit.min.js"></script>
+  <script src="js/uikit-icons.min.js"></script>
+
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+  <link rel="stylesheet" href="TemplateData/style.css">
+  <script src="TemplateData/UnityProgress.js"></script>
+  <script src="Build/UnityLoader.js"></script>
+  <script>
+    var gameInstance = UnityLoader.instantiate("gameContainer", "Build/shinobi_web.json", { onProgress: UnityProgress });
+  </script>
+</head>
+
+<body>
+  <div class="webgl-content">
+    <div id="gameContainer" style="width: 1280px; height: 720px; background: none !important;"></div>
+    <!-- <div class="footer">
+      <div class="fullscreen" onclick="gameInstance.SetFullscreen(1)"></div>
+      <div class="title">Expand to Fullscreen</div>
+
+    </div> -->
+  </div>
+
+
+  <div id="surveymodal" class="uk-flex-top" uk-modal>
+    <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+      <div class="uk-modal-header">
+        <h2 class="uk-modal-title">Continue to Survey</h2>
+      </div>
+      <div class="uk-modal-body">
+        <p>
+          Click the button below to go to:<br>
+          <a id="surveylinktext" class="surveylink uk-text-small" target="_blank"></a>
+        </p>
+        <p>
+          <span id="surveyidtext">Your participant ID is:</span><br>
+          <strong><span id="surveyid" class="uk-text-large"></span></strong>
+        </p>
+
+      </div>
+
+      <div class="uk-modal-footer uk-text-center">
+        <a class="uk-button uk-button-primary surveylink" target="_blank">Open Survey in new Window</a>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="fpsmodal" class="uk-flex-top" uk-modal>
+    <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+      <div class="uk-modal-header">
+        <h2 class="uk-modal-title">Weak Performance Detected!</h2>
+      </div>
+      <div class="uk-modal-body">
+        <p>
+          Unfortunately your computer does not perform well enough to run this experiment.
+        </p>
+        <p>
+          Please try again on a more powerful computer.
+        </p>
+        <p>
+          We apologize for the inconvenience!
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Game Experiment</title>
+  <meta name="robots" content="noindex" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <link rel="stylesheet" href="css/uikit.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+
+
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,700" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="js/uikit.min.js"></script>
+  <script src="js/uikit-icons.min.js"></script>
+
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+</head>
+
+<body>
+
+  <div class="uk-container uk-container-center uk-margin-large-top uk-margin-large-bottom uk-position-relative">
+    <div id="loadblock"></div>
+
+
+    <h1 class="uk-heading-small uk-heading-divider">Welcome to the "Shinobi Valley" Experiment</h1>
+    <p>
+      In this study we investigate the impact of individual game elements on the gameplay experience. You will play a
+      short 3D video game (10-15 minutes) and then answer survey questions
+      about your experience. The game does not
+      feature any acts of violence or controversial topics and should be playable by anyone.
+    </p>
+    <p>
+      <div class="uk-alert-primary" uk-alert>
+        <strong>Important to know:</strong>
+        <ul>
+          <li><strong>Play on a desktop or laptop computer.</strong> The game does not work on smartphones or tablets!
+          </li><br>
+          <li>A relatively performant computer is required. The game will stop if it detects a very low framerate.</li>
+          <li><strong>Do not minimize the game window or have other windows on top of it</strong> - this will impact
+            performance and stop the experiment.</li>
+          <li><strong>Do not replay the game!</strong> This includes stopping for performance reasons. We cannot use
+            your data otherwise!</li><br>
+          <li><strong>Pause your adblocker.</strong> We do not present ads, but we redirect you from the game to the
+            survey. That process may fail with an adblocker.</li><br>
+          <li>We recommend to use headphones for playing.</li>
+          <li>The game may have different conditions for different participants.<br>Do not discuss the contents of the
+            game with other potential participants!</li>
+        </ul>
+
+        <p>
+          <strong>We are giving away 3 x 25 EUR vouchers of a store of your choice among all participants.<br>
+            To enter the give-away, <a
+              href="mailto:m.a.gomez.maureira@liacs.leidenuniv.nl?subject=[Shinobi2020] Give-Away Participation">send a
+              mail to Marcello</a> with the ID given to you at the end of the survey!</strong>
+
+        </p>
+      </div>
+
+    </p>
+    <p> All
+      data created in this experiment (gameplay data and survey responses) are kept confidential and
+      anonymized. You will receive a unique identifier that you can use to inquire about your own data, or request its
+      removal.
+    </p>
+    <p>
+      Your participation in this study is voluntary and you can withdraw from the study at any point and for any reason.
+      If you would like to contact the researchers of this study, please e-mail:
+    </p>
+
+    <div uk-grid class="uk-margin-bottom">
+      <div class="uk-width-expand">
+        <p>
+          <strong>Marcello A. Gómez-Maureira</strong><br>
+          <a href="mailto:m.a.gomez.maureira@liacs.leidenuniv.nl">m.a.gomez.maureira@liacs.leidenuniv.nl</a>
+        </p>
+
+      </div>
+
+      <div class="uk-width-expand">
+        <p>
+          <strong>Dr. Max J. van Duijn</strong><br>
+          <a href="mailto:m.j.van.duijn@liacs.leidenuniv.nl">m.j.van.duijn@liacs.leidenuniv.nl</a>
+        </p>
+      </div>
+    </div>
+
+
+
+
+
+
+
+    <div id="webglwarning" class="uk-alert-danger" uk-alert>
+      <p><span uk-icon="icon: warning; ratio: 1.2" class="uk-margin-small-right"></span> The game experiment only runs
+        on <strong>Firefox or Chrome</strong> with <strong>activated WebGL2</strong>!</p>
+
+      </p><strong>Visit this page again with a supported browser to continue!</strong></p>
+
+    </div>
+
+    <div id="viewportwarning" class="uk-alert-danger" uk-alert>
+      <p><span uk-icon="icon: warning; ratio: 1.2" class="uk-margin-small-right"></span> The experiment needs to
+        run in a window that is at least <strong>1280 by 720 pixel</strong> (yours is <span id=widthdisplay></span> by
+        <span id=heightdisplay></span> pixel).<p>
+
+        </p><strong>Resize your browser window,</strong> or
+        visit this page on a device with higher resolution if your window is already maximized.</p>
+
+      </p><strong>The experiment cannot start as long as the window is too small!</strong></p>
+
+    </div>
+
+
+    <div id="gotogame" style="display: none;">
+
+      <p>
+        By clicking the button below, you acknowledge that your participation in the study is voluntary, and that you
+        are aware that you may choose to terminate your participation in the study at any
+        time and for any reason.
+      </p>
+      <p>
+        <a class="uk-button uk-button-primary"
+          href="http://research.dandyus.com/shinobivalley/game.html?typeid=SURVEYCIRCLE">Begin Experiment</a>
+      </p>
+
+    </div>
+
+
+
+  </div>
+
+
+
+  <script>
+
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) {
+      if (typeof WebGL2RenderingContext !== 'undefined') {
+        console.log('Browser appears to support WebGL2 but it might be disabled. Try updating your OS and/or video card drivers');
+      } else {
+        console.log('Browser has no WebGL2 support at all');
+      }
+    }
+
+    function isMinimumViewportSize() {
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+      console.log(`${width} x ${height}`);
+
+      if (width < 1280 || height < 720) {
+        $("#gotogame").hide();
+        $("#viewportwarning").show();
+        $("#widthdisplay").html(width);
+        $("#heightdisplay").html(height);
+
+
+        return false;
+      }
+
+      $("#viewportwarning").hide()
+      $("#gotogame").show()
+
+      return true;
+    }
+
+    $(window).on('load', function () {
+      $('#loadblock').fadeOut();
+
+      if (gl) {
+        $("#webglwarning").hide();
+        isMinimumViewportSize();
+      } else {
+        $("#viewportwarning").hide()
+      }
+
+
+    });
+
+    $(window).resize(function () {
+      if (!gl) {
+        $("#viewportwarning").hide()
+        return;
+      }
+      isMinimumViewportSize();
+    });
+
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,4 @@
+.DS_Store
+builds/*
+client-assets/Build/*
+client-assets/TemplateData/*
