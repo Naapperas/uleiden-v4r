@@ -14,13 +14,15 @@ public class Query
 
 
     public static void PostNewUser(string _platform, string _timestamp)
+
     {
 
         var payload = new JSONPostNewUser
         {
             key = LOGGER.Instance.GetPostKey(),
             parameters = string.Format("{0}", _platform),
-            timestamp = _timestamp
+            timestamp = _timestamp,
+            perspective = GM.Instance.player.persp.ToString()
         };
 
         Debug.Log("New user: " + payload.ToString());
@@ -62,10 +64,7 @@ public class Query
         {
             Debug.Log(response.Text);
         });
-
-
     }
-
 
     private static string GetFullUrl(string url)
     {

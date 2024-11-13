@@ -52,23 +52,23 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Splat0:
-        m_Texture: {fileID: 2800000, guid: 874834395e9634ef389891f2b3c861aa, type: 3}
+        m_Texture: {fileID: 2800000, guid: 24cb41b5244d3410d85e37a39b52c034, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Splat1:
-        m_Texture: {fileID: 2800000, guid: 9757c8830b8cc4bfaaf9c5b6899b1152, type: 3}
+        m_Texture: {fileID: 2800000, guid: e814f48cda7bb4eb4bf2ef3f17b497a5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Splat2:
-        m_Texture: {fileID: 2800000, guid: feec04f20df484fd2918ad9c5d2046fd, type: 3}
+        m_Texture: {fileID: 2800000, guid: 00758a02a3d814eb39e89a103803e927, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Splat3:
-        m_Texture: {fileID: 2800000, guid: 8b1dd4b79621e4e47805ce1b32ee98a7, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0db3d29475ee04ad890be9ac7f8518b5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Splat4:
-        m_Texture: {fileID: 2800000, guid: 325b98755e8204c1cb086bdc23e66765, type: 3}
+        m_Texture: {fileID: 2800000, guid: df9714857f07845a899f8be4a2bd575e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Splat5:

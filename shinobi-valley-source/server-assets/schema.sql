@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS "timeseries";
 CREATE TABLE "userdata" (
     "id" INTEGER NOT NULL,
     "user" TEXT NOT NULL,
+    "perspective" TEXT NOT NULL, -- Add as separate datum so we can do operations directly dependent on this.
     "ipaddr" TEXT NOT NULL,
     "starttime" TEXT NOT NULL,
     "endtime" TEXT,

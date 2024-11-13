@@ -16,6 +16,8 @@
 			$unityparams = $_POST['parameters'];
 			$timestamp = $_POST['timestamp'];
 
+			$perspective = $_POST['perspective'];
+
 			// Condition chances -- random inclusive
 			$style = (rand(1, 100) > 55 ? "NINJA" : "SPACE"); 	// right value equals chances for SPACE
 			$patterns = rand(1, 100) > 25;						// right value equals chances for NO patterns
@@ -24,8 +26,8 @@
 
 			$log_params = $style . "_PAT:" .  var_export($patterns, true) . "_" . $direction . "_TXT:" . var_export($context, true) . "_" . $unityparams;
 
-			$id = $this->query("INSERT INTO userdata (user, ipaddr, starttime, endtime, params) 
-				VALUES (?, ?, datetime(?, 'unixepoch'), NULL, ?)", array( $username, $user_ip, $timestamp, $log_params), true);
+			$id = $this->query("INSERT INTO userdata (user, perspective, ipaddr, starttime, endtime, params) 
+				VALUES (?, ?, ?, datetime(?, 'unixepoch'), NULL, ?)", array( $username, $perspective, $user_ip, $timestamp, $log_params), true);
 
 			return json_encode(array(
 				'id'		=>	$id,

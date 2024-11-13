@@ -169,6 +169,8 @@ public class GameCTRL : MonoBehaviour
             "_JMP:" + (GM.Instance.player.tpCtrl.isJumping ? 1 : 0) +
             "_RUN:" + (GM.Instance.player.tpCtrl.isSprinting ? 1 : 0);
 
+        // playerPos_cameraRotation_cameraRotationEulerY_cameraRotationEulerX_POSDELTA:posDelta_ROTDELTA:rotDelta_PD:pd_JMP:jmp_RUN:run
+
         LOGGER.Instance.AddToTimeseries("POSLOG", logLine);
     }
 

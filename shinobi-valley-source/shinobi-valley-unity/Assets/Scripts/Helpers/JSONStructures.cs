@@ -9,6 +9,7 @@ public class JSONPostNewUser
     public string key;
     public string parameters;
     public string timestamp;
+    public string perspective;
 
     public override string ToString()
     {
@@ -41,6 +42,8 @@ public class JSONPostSessionEnd
         return UnityEngine.JsonUtility.ToJson(this, true);
     }
 }
+
+
 
 [System.Serializable]
 public class JSONTimeseries
