@@ -1,21 +1,16 @@
 <?php
 	class Database extends Base{
-		private $db_host;
-		private $db_user;
-		private $db_pass;
-		private $db_name;
 		private $conn;
 		
 		function __construct(){
 			session_start();
 			try{
-				$this->db_host = 'localhost';
-				$this->db_user = 'DB_USERNAME';
-				$this->db_pass = 'DB_PASSWORD';
-				$this->db_name = 'DB_DBNAME';
-
-				if($this->conn == null)
-					$this->conn = new PDO('mysql:host='.$this->db_host.';dbname='.$this->db_name, $this->db_user, $this->db_pass);
+				if($this->conn == null) {
+					$this->conn = new PDO("sqlite:".dirname(__DIR__)."/db.db");
+					$this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+					$this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+					$this->conn->exec("PRAGMA foreign_keys = ON");
+				}
 			}
 			catch(PDOException $e){
 				echo ($this->status == 'dev') ? $e->getMessage() : '';

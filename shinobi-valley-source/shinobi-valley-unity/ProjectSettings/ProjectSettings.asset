@@ -644,10 +644,10 @@ PlayerSettings:
   facebookXfbml: 0
   facebookFrictionlessRequests: 1
   apiCompatibilityLevel: 6
-  cloudProjectId: 
+  cloudProjectId: 9a5c332c-cda1-4794-aefb-0f9b41ae5a2a
   framebufferDepthMemorylessMode: 0
-  projectName: 
-  organizationId: 
+  projectName: shinobi-valley-unity
+  organizationId: naapperas
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0
   disableOldInputManagerSupport: 0

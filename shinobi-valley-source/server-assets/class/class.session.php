@@ -6,7 +6,7 @@
 			$this->allowed = ["postnew", "postend"];
 		}
 
-		public function PostNew(){
+		public function PostNew() {
 			$user_ip = $_SERVER['REMOTE_ADDR'];
 			$ipnum = explode('.', $user_ip);
 			$hex_ip = sprintf('%02x%02x%02x%02x', $ipnum[0], $ipnum[1], $ipnum[2], $ipnum[3]);
@@ -25,7 +25,7 @@
 			$log_params = $style . "_PAT:" .  var_export($patterns, true) . "_" . $direction . "_TXT:" . var_export($context, true) . "_" . $unityparams;
 
 			$id = $this->query("INSERT INTO userdata (user, ipaddr, starttime, endtime, params) 
-				VALUES (?, ?, FROM_UNIXTIME(?), NULL, ?)", array( $username, $user_ip, $timestamp, $log_params), true);
+				VALUES (?, ?, datetime(?, 'unixepoch'), NULL, ?)", array( $username, $user_ip, $timestamp, $log_params), true);
 
 			return json_encode(array(
 				'id'		=>	$id,
@@ -49,7 +49,7 @@
 				return 'SERVER: ERROR -- Username Mismatch';
 			}
 
-			$sql = $this->query("UPDATE userdata SET endtime=FROM_UNIXTIME(?) WHERE id=?", array($timestamp, $user_id));
+			$sql = $this->query("UPDATE userdata SET endtime=datetime(?, 'unixepoch') WHERE id=?", array($timestamp, $user_id));
 			
 			return 'SERVER: Session End Posted';
 		}

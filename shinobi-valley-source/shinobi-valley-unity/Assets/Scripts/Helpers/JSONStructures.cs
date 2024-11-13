@@ -9,6 +9,11 @@ public class JSONPostNewUser
     public string key;
     public string parameters;
     public string timestamp;
+
+    public override string ToString()
+    {
+        return UnityEngine.JsonUtility.ToJson(this, true);
+    }
 }
 
 

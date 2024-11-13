@@ -10,19 +10,29 @@ using Proyecto26;
 public class Query
 {
 
-    static string basePath = "http://research.dandyus.com/shinobivalleyserver";
+    static string basePath = "http://localhost:8000";
 
 
     public static void PostNewUser(string _platform, string _timestamp)
     {
-        RestClient.Post<JSONPostNewReply>(GetFullUrl("session/postnew"), new JSONPostNewUser
+
+        var payload = new JSONPostNewUser
         {
             key = LOGGER.Instance.GetPostKey(),
             parameters = string.Format("{0}", _platform),
             timestamp = _timestamp
-        }).Then(response =>
+        };
+
+        Debug.Log("New user: " + payload.ToString());
+
+        RestClient.Post<JSONPostNewReply>(GetFullUrl("session/postnew"), payload).Then(response =>
         {
+            Debug.Log("SessionStart response: " + response);
+
             LOGGER.Instance.CB_SetServerId(response);
+        }).Catch(error =>
+        {
+            Debug.Log("Fodeu primo " + error);
         });
     }
 
@@ -36,7 +46,7 @@ public class Query
             timestamp = _timestamp
         }).Then(response =>
         {
-            Debug.Log(response.Text );
+            Debug.Log(response.Text);
         });
     }
 
@@ -50,7 +60,7 @@ public class Query
             postdata = input
         }).Then(response =>
         {
-            Debug.Log(response.Text );
+            Debug.Log(response.Text);
         });
 
 

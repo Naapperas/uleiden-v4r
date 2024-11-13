@@ -19,9 +19,11 @@ public class LOGGER : Singleton<LOGGER>
     bool waitingForServer;
 
     string iv;
-    static string plainkey = "XAQSJ24dpj46J28w";
+    // static string plainkey = "XAQSJ24dpj46J28w";
+    static string plainkey = "le99AGxBQMfsO3gA";
     static string hashedkey = CryptLib.getHashSha256(plainkey, 16);
-    static string postkey = "Xh42g8bXv5HLsDUD";
+    // static string postkey = "Xh42g8bXv5HLsDUD";
+    static string postkey = "6QUITHAyoYm8RJsR";
 
     float updateFreq = 5F;
     List<JSONTimeseries> postStack;
