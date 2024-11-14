@@ -31,7 +31,8 @@ public class Query
         {
             Debug.Log("SessionStart response: " + response);
 
-            LOGGER.Instance.CB_SetServerId(response);
+            if (response != null)
+                LOGGER.Instance.CB_SetServerId(response);
         }).Catch(error =>
         {
             Debug.Log("Fodeu primo " + error);

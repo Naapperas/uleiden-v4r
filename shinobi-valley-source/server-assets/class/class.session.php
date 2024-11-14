@@ -20,7 +20,7 @@
 
 			// Condition chances -- random inclusive
 			$style = (rand(1, 100) > 55 ? "NINJA" : "SPACE"); 	// right value equals chances for SPACE
-			$patterns = rand(1, 100) > 25;						// right value equals chances for NO patterns
+			$patterns = true;									// always have patterns
 			$direction = (rand(1, 100) > 55 ? "A2B" : "B2A"); 	// right value equals chances for B2A
 			$context = rand(1, 100) > 55;						// right value equals chances for NO context
 
