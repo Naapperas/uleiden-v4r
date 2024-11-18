@@ -38,8 +38,6 @@ public class SpawnPointCTRL : MonoBehaviour
 
             var probability = Random.Range(0f, 1f);
 
-            Debug.Log($"{probability} {pickProbability} {left} {needed}");
-
             if (probability < pickProbability)
             {
                 sample[--needed] = elements[left];
