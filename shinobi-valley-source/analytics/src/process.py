@@ -97,6 +97,8 @@ with Session(sqlite_engine) as session, session.begin():
         with MetricFile(metric_name) as metric_file:
             metric_data = metric_collector(session)
 
+            print(metric_data)
+
             metric_file.write(str(metric_data))
 
     # print(perspective_distribution(session))

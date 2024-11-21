@@ -7,16 +7,20 @@ public class SpawnPointCTRL : MonoBehaviour
 
     public GameObject collectiblePrefab;
 
+    public int effectiveSpawnPointAmount;
+
     void Start()
     {
         var collectibleSpawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoints");
 
-        var effectiveSpawnPointAmount = collectibleSpawnPoints.Length / 3;
+        Assert.IsFalse(collectibleSpawnPoints.Length < this.effectiveSpawnPointAmount);
 
-        var effectiveSpawnPoints = Sample(collectibleSpawnPoints, effectiveSpawnPointAmount);
+        var effectiveSpawnPoints = Sample(collectibleSpawnPoints, this.effectiveSpawnPointAmount);
 
         foreach (var spawnPoint in effectiveSpawnPoints)
         {
+            Debug.Log($"Spawning collectiblePrefab at {spawnPoint.transform.position}");
+
             Instantiate(collectiblePrefab, spawnPoint.transform.position, Quaternion.identity);
         }
     }

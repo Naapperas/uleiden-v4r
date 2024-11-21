@@ -48,7 +48,7 @@ public class PlayerCTRL : MonoBehaviour
 
         playerModel = playerObj.Find("PlayerModel").gameObject;
 
-        if (Random.Range(1, 10) >= -1)
+        if (Random.Range(1, 10) >= 5)
         {
             SetPerspectiveTo(Perspective.THIRDPERSON);
         }
@@ -56,8 +56,6 @@ public class PlayerCTRL : MonoBehaviour
         {
             SetPerspectiveTo(Perspective.FIRSTPERSON);
         }
-
-        Debug.Log(persp);
     }
 
     void LateUpdate()

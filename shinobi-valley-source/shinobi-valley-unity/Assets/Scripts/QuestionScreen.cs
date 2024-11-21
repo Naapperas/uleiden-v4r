@@ -9,38 +9,29 @@ using TMPro;
 
 public class QuestionScreen : MonoBehaviour
 {
-    public TMP_InputField questionInput;
     public GameObject sliderHandle;
     public Button submitButton;
 
     public Scrollbar scrollBar;
 
-    public GameObject[] panels;
+    public GameObject panel;
 
-    int questionSlide;
     bool screenFinished;
 
     private void OnEnable()
     {
-        questionInput.text = "";
         sliderHandle.SetActive(false);
         submitButton.interactable = false;
         screenFinished = false;
         scrollBar.value = 0.5F;
-        questionSlide = 0;
 
-        for (int i = 0; i < panels.Length; i++)
-        {
-            panels[i].SetActive(questionSlide == i);
-        }
+        panel.SetActive(true);
     }
 
 
 
     public void SliderClicked(BaseEventData eventData)
     {
-
-
         PointerEventData pointerData = eventData as PointerEventData;
 
         Vector2 result;
@@ -63,42 +54,20 @@ public class QuestionScreen : MonoBehaviour
 
         if (screenFinished) return;
 
-        switch (questionSlide)
-        {
-            case 0:
-                if (questionInput.text != "") submitButton.interactable = true;
-                break;
-            case 1:
-                if (sliderHandle.activeSelf) submitButton.interactable = true;
-                break;
-        }
-
+        if (sliderHandle.activeSelf) submitButton.interactable = true;
     }
 
     public void Continue()
     {
         if (screenFinished) return;
 
-        if (questionSlide == 0)
-        {
-            questionSlide = 1;
-            for (int i = 0; i < panels.Length; i++)
-            {
-                panels[i].SetActive(questionSlide == i);
-            }
-        }
-        else
-        {
-            // If slider not active, then do not permit continue
-            if (!sliderHandle.activeSelf) return;
+        // If slider not active, then do not permit continue
+        if (!sliderHandle.activeSelf) return;
 
-            screenFinished = true;
-            string output = questionInput.text + "_" + scrollBar.value.ToString("F2");
-            Debug.Log(output);
-            LOGGER.Instance.AddToTimeseries("FEEDBACK", output);
-            GM.Instance.stateLoops.QuestionScreenDismissed();
-        }
+        screenFinished = true;
+        string output = scrollBar.value.ToString("F2");
+        Debug.Log(output);
+        LOGGER.Instance.AddToTimeseries("FEEDBACK", output);
+        GM.Instance.stateLoops.QuestionScreenDismissed();
     }
-
-
 }
