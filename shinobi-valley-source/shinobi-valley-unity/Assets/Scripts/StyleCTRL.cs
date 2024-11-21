@@ -61,7 +61,14 @@ public class StyleCTRL : MonoBehaviour
         // Get style and terrain selection
         string styleString = GM.Instance.game.gameStyle == HLP.Style.NINJA ? "NINJA" : "SPACE";
 
-        int ts = 0;
+        bool patternsActive = GM.Instance.game.patternsActive;
+        int ts = patternsActive ? 0 : 1;
+
+        // Pattern-based init
+        mainTerrain[0].gameObject.SetActive(patternsActive);
+        mainTerrain[1].gameObject.SetActive(!patternsActive);
+        patternRoot.SetActive(patternsActive);
+
 
         detailArray = mainTerrain[ts].terrainData.detailPrototypes;
         treeArray = mainTerrain[ts].terrainData.treePrototypes;
