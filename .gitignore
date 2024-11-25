@@ -2,6 +2,15 @@
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
 #
+
+# The two terrain assets that are weird and some unity layout stuff
+shinobi-valley-source/shinobi-valley-unity/Assets/Terrain/GameTerrain.asset
+shinobi-valley-source/shinobi-valley-unity/Assets/Terrain/GameTerrain_NoPatterns.asset
+shinobi-valley-source/shinobi-valley-unity/Packages/manifest.json
+shinobi-valley-source/shinobi-valley-unity/Packages/packages-lock.json
+shinobi-valley-source/shinobi-valley-unity/UserSettings/Layouts/default-6000.dwlt
+
+
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
@@ -78,3 +87,7 @@ crashlytics-build.properties
 /[Aa]ssets/appsettings.Development.json.meta
 
 .env
+
+
+
+
