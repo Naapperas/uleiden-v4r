@@ -19,6 +19,7 @@ public class StateLoops : MonoBehaviour
 
     public AudioMixerGroup musicMix;
     public CanvasGroup helperMenuIndicator;
+    public CanvasGroup informationPanel;
     public Transform playerMeditationPoint;
     public Transform endShotCamPoint;
 
@@ -299,6 +300,10 @@ public class StateLoops : MonoBehaviour
     {
         GM.Instance.player.LockCamera(false);
         lookSum = 0F;
+
+        // HACK: can't seem to add actions on the scene manager, add code here to do that
+        informationPanel.alpha = 1F;
+        Debug.Log("Entrei aqui");
     }
 
     public void LookTutorial_Update()

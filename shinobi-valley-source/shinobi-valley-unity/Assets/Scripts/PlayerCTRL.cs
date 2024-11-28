@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 using Invector.CharacterController;
 
@@ -29,6 +30,8 @@ public class PlayerCTRL : MonoBehaviour
 
     float respawnTimer;
     int permafallCount;
+
+    public TextMeshProUGUI perspectiveText;
 
     [HideInInspector] public bool blockSettingChange;
 
@@ -112,8 +115,14 @@ public class PlayerCTRL : MonoBehaviour
         tpCam.defaultDistance =
             input == Perspective.THIRDPERSON ? camDistance : 0f;
 
-        playerModel.SetActive(input == Perspective.THIRDPERSON);
+        // HACK: keep big morphed monkey disabled
+        // playerModel.SetActive(input == Perspective.THIRDPERSON);
         persp = input;
+
+        if (perspectiveText != null)
+        {
+            perspectiveText.text = "Perspective: " + (input == Perspective.THIRDPERSON ? "Third Person" : "First Person");
+        }
     }
 
     public void LockMovement(bool input)

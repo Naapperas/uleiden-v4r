@@ -19,8 +19,6 @@ public class SpawnPointCTRL : MonoBehaviour
 
         foreach (var spawnPoint in effectiveSpawnPoints)
         {
-            Debug.Log($"Spawning collectiblePrefab at {spawnPoint.transform.position}");
-
             Instantiate(collectiblePrefab, spawnPoint.transform.position, Quaternion.identity);
         }
     }
