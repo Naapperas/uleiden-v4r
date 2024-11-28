@@ -7,6 +7,8 @@ public class PickupCTRL : MonoBehaviour
 
     public Transform pickupModel;
 
+    public CollectibleCTRL collectibleCTRL;
+
     // void DelayedDestruction()
     // {
     //     Destroy(gameObject);
@@ -16,5 +18,8 @@ public class PickupCTRL : MonoBehaviour
     {
         pickupModel.gameObject.SetActive(false);
         // Invoke("DelayedDestruction", 5F);
+
+        if (collectibleCTRL != null)
+            collectibleCTRL.collect();
     }
 }

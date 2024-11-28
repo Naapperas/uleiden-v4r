@@ -9,6 +9,8 @@ public class SpawnPointCTRL : MonoBehaviour
 
     public int effectiveSpawnPointAmount;
 
+    public CollectibleCTRL collectibleCTRL;
+
     void Start()
     {
         var collectibleSpawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoints");
@@ -19,7 +21,9 @@ public class SpawnPointCTRL : MonoBehaviour
 
         foreach (var spawnPoint in effectiveSpawnPoints)
         {
-            Instantiate(collectiblePrefab, spawnPoint.transform.position, Quaternion.identity);
+            var obj = Instantiate(collectiblePrefab, spawnPoint.transform.position, Quaternion.identity);
+
+            obj.GetComponent<PickupCTRL>().collectibleCTRL = collectibleCTRL;
         }
     }
 
