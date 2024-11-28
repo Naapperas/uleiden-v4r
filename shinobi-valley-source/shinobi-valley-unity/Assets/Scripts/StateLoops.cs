@@ -23,6 +23,7 @@ public class StateLoops : MonoBehaviour
     public Transform playerMeditationPoint;
     public Transform endShotCamPoint;
 
+    public TextMeshProUGUI idText;
 
     public BGCcMath pathCurve;
 
@@ -33,6 +34,7 @@ public class StateLoops : MonoBehaviour
 
     [Header("Connection Feedback")]
     public TextMeshProUGUI connectionFeedback;
+
 
 
     [HideInInspector] public float pretimer = 0f;
@@ -303,7 +305,7 @@ public class StateLoops : MonoBehaviour
 
         // HACK: can't seem to add actions on the scene manager, add code here to do that
         informationPanel.alpha = 1F;
-        Debug.Log("Entrei aqui");
+        idText.text = $"Player ID: {LOGGER.Instance.userName}";
     }
 
     public void LookTutorial_Update()
