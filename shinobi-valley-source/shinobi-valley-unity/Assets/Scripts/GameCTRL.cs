@@ -44,7 +44,7 @@ public class GameCTRL : MonoBehaviour
 
     internal bool playConditionSet = false;
 
-    string surveyUrl = "https://SURVEYURL?gameid=";
+    string surveyUrl = "https://leidenuniv.eu.qualtrics.com/jfe/form/SV_6opH3UpK4ANIhkG?gameid=";
 
     void Awake()
     {
