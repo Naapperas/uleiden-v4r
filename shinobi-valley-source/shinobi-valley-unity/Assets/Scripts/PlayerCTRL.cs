@@ -59,8 +59,6 @@ public class PlayerCTRL : MonoBehaviour
         {
             SetPerspectiveTo(Perspective.FIRSTPERSON);
         }
-
-        SetPerspectiveTo(Perspective.THIRDPERSON);
     }
 
     void LateUpdate()
