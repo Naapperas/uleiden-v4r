@@ -17,6 +17,7 @@ public class WebCaller : MonoBehaviour
 
     public void FpsWarning()
     {
-        CallFpsWarning();
+        // DO nothing, since on low spec hardware this can make the web-based game crash
+        // CallFpsWarning();
     }
 }

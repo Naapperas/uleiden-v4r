@@ -60,7 +60,7 @@ public class PlayerCTRL : MonoBehaviour
             SetPerspectiveTo(Perspective.FIRSTPERSON);
         }
 
-        SetPerspectiveTo(Perspective.THIRDPERSON); 
+        SetPerspectiveTo(Perspective.THIRDPERSON);
     }
 
     void LateUpdate()
@@ -117,8 +117,7 @@ public class PlayerCTRL : MonoBehaviour
         tpCam.defaultDistance =
             input == Perspective.THIRDPERSON ? camDistance : 0f;
 
-        // HACK: keep big morphed monkey disabled
-        // playerModel.SetActive(input == Perspective.THIRDPERSON);
+        playerModel.SetActive(input == Perspective.THIRDPERSON);
         persp = input;
 
         if (perspectiveText != null)

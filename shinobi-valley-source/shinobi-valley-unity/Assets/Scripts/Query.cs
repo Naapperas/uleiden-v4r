@@ -10,7 +10,7 @@ using Proyecto26;
 public class Query
 {
 
-    static string basePath = "http://localhost:8000";
+    static string basePath = "https://shinobackend.toino.pt";
 
 
     public static void PostNewUser(string _platform, string _timestamp)
