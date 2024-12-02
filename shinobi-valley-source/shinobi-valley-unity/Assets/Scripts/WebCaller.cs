@@ -12,7 +12,8 @@ public class WebCaller : MonoBehaviour
 
     public void OpenSurvey(string input)
     {
-        CallOpenSurvey(input);
+        // Participants are meant to start answering the survey before playing
+        // CallOpenSurvey(input);
     }
 
     public void FpsWarning()

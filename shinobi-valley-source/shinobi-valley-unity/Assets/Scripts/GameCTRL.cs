@@ -44,7 +44,7 @@ public class GameCTRL : MonoBehaviour
 
     internal bool playConditionSet = false;
 
-    string surveyUrl = "https://leidenuniv.eu.qualtrics.com/jfe/form/SV_6opH3UpK4ANIhkG?gameid=";
+    // string surveyUrl = "https://leidenuniv.eu.qualtrics.com/jfe/form/SV_6opH3UpK4ANIhkG?gameid=";
 
     void Awake()
     {
@@ -106,16 +106,14 @@ public class GameCTRL : MonoBehaviour
 
     public void OpenSurvey()
     {
-        string surveyString = LOGGER.Instance.userName + "U" + LOGGER.Instance.userId.ToString();
+        /*         string surveyString = LOGGER.Instance.userName + "U" + LOGGER.Instance.userId.ToString();
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-        webcall.OpenSurvey(surveyString);
-#else
-        Screen.fullScreen = false;
-        Application.OpenURL(surveyUrl + surveyString + "&typeid=LAB");
-#endif
-
-
+        #if UNITY_WEBGL && !UNITY_EDITOR
+                webcall.OpenSurvey(surveyString);
+        #else
+                Screen.fullScreen = false;
+                Application.OpenURL(surveyUrl + surveyString + "&typeid=LAB");
+        #endif */
     }
 
 
