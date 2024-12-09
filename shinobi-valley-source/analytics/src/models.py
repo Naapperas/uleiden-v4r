@@ -6,13 +6,15 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
+
 class Base(DeclarativeBase):
     pass
 
+
 class Userdata(Base):
-    
+
     __tablename__ = "userdata"
-    
+
     id: Mapped[int] = mapped_column(primary_key=True)
 
     user: Mapped[str]
@@ -21,15 +23,16 @@ class Userdata(Base):
     starttime: Mapped[str]
     endtime: Mapped[Optional[str]]
     params: Mapped[str]
-    
+
     timeseries_logs: Mapped[List["Timeseries"]] = relationship(
         back_populates="userdata", cascade="all, delete-orphan"
     )
 
+
 class Timeseries(Base):
-    
+
     __tablename__ = "timeseries"
-    
+
     id: Mapped[int] = mapped_column(primary_key=True)
 
     timestamp: Mapped[str]
@@ -37,6 +40,5 @@ class Timeseries(Base):
     logline: Mapped[str]
 
     userdata_id: Mapped[int] = mapped_column(ForeignKey("userdata.id"))
-    
-    userdata: Mapped["Userdata"] = relationship(back_populates="timeseries_logs")
 
+    userdata: Mapped["Userdata"] = relationship(back_populates="timeseries_logs")
