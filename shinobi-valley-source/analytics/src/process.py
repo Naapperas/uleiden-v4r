@@ -5,7 +5,9 @@
 from pathlib import Path
 from functools import reduce
 from itertools import combinations
+from collections import Counter
 from operator import add
+import datetime
 import math
 from typing import Sequence, Optional
 from abc import ABC
@@ -20,6 +22,8 @@ current_working_directory = Path.cwd()
 db_file_path = f"sqlite:///{str(current_working_directory.parent.joinpath('server-assets', 'db.db'))}"
 
 sqlite_engine = create_engine(db_file_path, echo=False)
+
+USER_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class TimeseriesLog(ABC):
@@ -131,14 +135,22 @@ Banana.ALLOWED_DISTANCE_SQUARED *= 0.25
 
 
 def parse_userdata(
-    users: Sequence[Userdata],
+    _users: Sequence[Userdata], usernames_with_endtimes: dict[str, datetime.datetime]
 ) -> dict[int, tuple[Userdata, list[TimeseriesLog]]]:
-    data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
+    _data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
 
-    for user in users:
-        timeseries_data: Sequence[Timeseries] = user.timeseries_logs
+    for _user in _users:
 
-        user_id = user.id
+        if _user.endtime is None:
+
+            possible_endtime = usernames_with_endtimes.get(_user.user, None)
+
+            if possible_endtime is not None:
+                _user.endtime = possible_endtime.strftime(USER_TIMESTAMP_FORMAT)
+
+        timeseries_data: Sequence[Timeseries] = _user.timeseries_logs
+
+        _user_id = _user.id
 
         timeseries_logs: list[TimeseriesLog] = []
         last_position_log: Optional[PositionLogging] = None
@@ -146,10 +158,10 @@ def parse_userdata(
             match timeseries_log.logtype:
                 case "POSLOG":
 
-                    log = PositionLogging(user_id, timeseries_log.logline)
+                    _log = PositionLogging(_user_id, timeseries_log.logline)
 
-                    last_position_log = log
-                    timeseries_logs.append(log)
+                    last_position_log = _log
+                    timeseries_logs.append(_log)
                 case "TRIGGER_ROI_ENTER":
                     match timeseries_log.logline:
                         case "Foraging_Banana":
@@ -160,7 +172,7 @@ def parse_userdata(
                                 if banana.close(tuple(last_logged_position)):
 
                                     timeseries_logs.append(
-                                        BananaPickup(user_id, banana.index)
+                                        BananaPickup(_user_id, banana.index)
                                     )
                                     break
 
@@ -169,57 +181,63 @@ def parse_userdata(
                 case _:
                     pass
 
-        data[user_id] = (user, timeseries_logs)
+        _data[_user_id] = (_user, timeseries_logs)
 
-    return data
+    return _data
 
 
 with Session(sqlite_engine) as session, session.begin():
 
-    survey_usernames = [
-        "4798594B",
-        "4BB5EA24",
-        "2A9639A5",
-        "696C2597",
-        "D19BDA5A",
-        "CCD8974B",
-        "4D68BDE",
-        "7588E46C",
-        "6503A955",
-        "BF48A639",
-        "8E2BF216",
-        "3D5671FC",
-        "DCEE048E",
-        "A6CE844F",
-        "452A633D",
-        "F2959E00",
-        "8778A580",
-        "EDAC146",
-        "4DE88833",
-        "F1555EEE",
-        "275FC505",
-        "B39628C",
-        "8FB73E2",
-        "850F2ABB",
-        "E85F2688",
-        "816CBFD0",
-        "F0867DFE",
-        "E53E0FF7",
-        "4B7ADA93",
-        "778FC0DD",
-        "C22A0327",
-        "7243788C",
-    ]
+    survey_usernames_with_endtimes = {
+        "4798594B": None,
+        "4BB5EA24": datetime.datetime(2024, 12, 8, 16, 29),
+        "2A9639A5": datetime.datetime(2024, 12, 8, 16, 29),
+        "696C2597": datetime.datetime(2024, 12, 8, 14, 47),
+        "D19BDA5A": datetime.datetime(2024, 12, 7, 11, 20),
+        "CCD8974B": None,
+        "4D68BDE": datetime.datetime(2024, 12, 6, 21, 10),
+        "7588E46C": datetime.datetime(2024, 12, 6, 21, 5),
+        "6503A955": datetime.datetime(2024, 12, 6, 21, 10),
+        "BF48A639": None,
+        "8E2BF216": None,
+        "3D5671FC": None,
+        "DCEE048E": None,
+        "A6CE844F": datetime.datetime(2024, 12, 5, 17, 46),
+        "452A633D": None,
+        "F2959E00": datetime.datetime(2024, 12, 5, 12, 7),
+        "8778A580": datetime.datetime(2024, 12, 5, 11, 52),
+        "EDAC146": datetime.datetime(2024, 12, 5, 11, 41),
+        "4DE88833": datetime.datetime(2024, 12, 5, 11, 35),
+        "F1555EEE": datetime.datetime(2024, 12, 5, 11, 38),
+        "275FC505": datetime.datetime(2024, 12, 5, 11, 36),
+        "B39628C": datetime.datetime(2024, 12, 5, 11, 34),
+        "8FB73E2": datetime.datetime(2024, 12, 5, 11, 17),
+        "850F2ABB": datetime.datetime(2024, 12, 5, 11, 24),
+        "E85F2688": datetime.datetime(2024, 12, 5, 11, 16),
+        "816CBFD0": datetime.datetime(2024, 12, 5, 11, 17),
+        "F0867DFE": datetime.datetime(2024, 12, 5, 11, 10),
+        "E53E0FF7": None,
+        "4B7ADA93": datetime.datetime(2024, 12, 4, 12, 1),
+        "778FC0DD": datetime.datetime(2024, 12, 3, 21, 53),
+        "C22A0327": None,
+        "7243788C": datetime.datetime(2024, 12, 3, 15, 18),
+        "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
+    }
 
     data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
 
-    users = session.execute(select(Userdata).where(Userdata.user.in_(survey_usernames)))
+    users = session.execute(
+        select(Userdata).where(Userdata.user.in_(survey_usernames_with_endtimes.keys()))
+    )
 
-    data = parse_userdata(map(lambda r: r.Userdata, users))
+    data = parse_userdata(
+        map(lambda r: r.Userdata, users), survey_usernames_with_endtimes
+    )
 
     print(f"Results for {len(data)} users:")
 
-    print("\tBanana pickups:")
+    banana_pickup_counter = Counter()
+
     for user_id, user_data in data.items():
 
         banana_pickups: list[id] = []
@@ -230,7 +248,37 @@ with Session(sqlite_engine) as session, session.begin():
             match log:
                 case BananaPickup() as banana_pickup:
                     banana_pickups.append(banana_pickup.banana_id)
+                    banana_pickup_counter[banana_pickup.banana_id] += 1
                 case _:
                     pass
 
-        print(f"\t\tUser {user_id} picked bananas {banana_pickups}")
+        print(f"\n\tUser {user.user} picked bananas {banana_pickups}")
+
+        if user.endtime is not None:
+
+            delta = datetime.datetime.strptime(
+                user.endtime, USER_TIMESTAMP_FORMAT
+            ) - datetime.datetime.strptime(user.starttime, USER_TIMESTAMP_FORMAT)
+            seconds = delta.total_seconds()
+            seconds %= (
+                60 * 60
+            )  # remove hours since we know for a fact no-one played for over an hour
+            delta = datetime.timedelta(seconds=seconds)
+
+            print(
+                f"\tUser {user.user} played from {user.starttime} until {user.endtime}, totaling {delta}"
+            )
+
+            if len(banana_pickups) > 0:
+                average_bananas_per_second = seconds // len(banana_pickups)
+                delta = delta = datetime.timedelta(seconds=average_bananas_per_second)
+
+                print(f"\tUser {user.user} picked on average one banana every {delta}")
+            else:
+                print(f"\tUser {user.user} didn't pick any bananas")
+
+        else:
+            print(f"\tCannot calculate game duration for user {user.user}")
+            print(f"\tCannot calculate average banana pick rate for user {user.user}")
+
+    print(f"\nBanana pick counts: {banana_pickup_counter}")
