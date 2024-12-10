@@ -1,28 +1,41 @@
-# pylint: disable=missing-class-docstring,missing-function-docstring
-"""
-"""
+# process_logs.py
 
-from pathlib import Path
-from functools import reduce
-from itertools import combinations
-from collections import Counter
-from operator import add
 import datetime
 import math
-from typing import Sequence, Optional
 from abc import ABC
+from collections import Counter
+from functools import reduce
+from itertools import combinations
+from operator import add
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Tuple
 
+import matplotlib
+import pandas as pd
+import seaborn as sns
+
+# Use 'Agg' backend for non-interactive environments
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from models import Userdata, Timeseries
+from models import (  # Ensure models.py is in the same directory
+    Timeseries,
+    Userdata,
+)
 
+# Define constants
+USER_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+# Define the current working directory and database file path
 current_working_directory = Path.cwd()
-
 db_file_path = f"sqlite:///{str(current_working_directory.parent.joinpath('server-assets', 'db.db'))}"
 
+# Create the SQLAlchemy engine
 sqlite_engine = create_engine(db_file_path, echo=False)
 
+# Define the timestamp format
 USER_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
@@ -48,7 +61,7 @@ class PositionLogging(TimeseriesLog):
         jumping = parts[6]
         running = parts[7]
 
-        # some of the logs have a ',' instead of a '.' for floating point values, fix it
+        # Some of the logs have a ',' instead of a '.' for floating point values, fix it
         def fix_floats(value):
             return value.replace(",", ".")
 
@@ -58,16 +71,14 @@ class PositionLogging(TimeseriesLog):
         self.pos_delta = float(fix_floats(pos_delta.split(":")[1]))
         self.rot_delta = float(fix_floats(rot_delta.split(":")[1]))
         self.path_distance = float(fix_floats(path_distance.split(":")[1]))
-        self.jumping = bool(jumping)
-        self.running = bool(running)
+        self.jumping = bool(int(jumping.split(":")[1]))
+        self.running = bool(int(running.split(":")[1]))
 
 
 class BananaPickup(TimeseriesLog):
     def __init__(self, user_id: int, banana_id: int):
         super().__init__(user_id)
-
         self.banana_id = banana_id
-
 
 class Banana:
 
@@ -101,13 +112,12 @@ class Banana:
         )
 
     def close(self, other_pos: tuple[float, float, float]) -> bool:
-
         _dist_squared = self.dist_squared(other_pos)
-
         return _dist_squared <= Banana.ALLOWED_DISTANCE_SQUARED
 
 
-bananas: dict[int, Banana] = {
+# Initialize bananas
+bananas: Dict[int, Banana] = {
     banana.index: banana
     for banana in [
         Banana((87.01, -5.39, 43.25)),
@@ -122,163 +132,326 @@ bananas: dict[int, Banana] = {
     ]
 }
 
+# Determine the minimum allowed distance squared between any two bananas
 for pair in combinations(bananas.values(), 2):
-
     banana1, banana2 = pair
-
     dist_squared = banana1.dist_squared(banana2.pos)
-
     Banana.ALLOWED_DISTANCE_SQUARED = min(dist_squared, Banana.ALLOWED_DISTANCE_SQUARED)
 
-# equivalent to halving the "normal" distance, since we are always working with squared distances
+# Equivalent to halving the "normal" distance, since we are always working with squared distances
 Banana.ALLOWED_DISTANCE_SQUARED *= 0.25
 
 
+def get_banana_positions(bananas: Dict[int, Banana]) -> pd.DataFrame:
+    """Extracts banana positions into a DataFrame."""
+    banana_data = []
+    for banana in bananas.values():
+        banana_data.append({
+            'banana_id': banana.index,
+            'x': banana.pos[0],
+            'y': banana.pos[1],
+            'z': banana.pos[2]
+        })
+    return pd.DataFrame(banana_data)
+
+
 def parse_userdata(
-    _users: Sequence[Userdata], usernames_with_endtimes: dict[str, datetime.datetime]
-) -> dict[int, tuple[Userdata, list[TimeseriesLog]]]:
-    _data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
+    _users: Sequence[Userdata], 
+    usernames_with_endtimes: Dict[str, Optional[datetime.datetime]]
+) -> Dict[int, Tuple[Userdata, List[TimeseriesLog]]]:
+    _data: Dict[int, Tuple[Userdata, List[TimeseriesLog]]] = {}
 
     for _user in _users:
-
         if _user.endtime is None:
-
             possible_endtime = usernames_with_endtimes.get(_user.user, None)
-
             if possible_endtime is not None:
                 _user.endtime = possible_endtime.strftime(USER_TIMESTAMP_FORMAT)
 
         timeseries_data: Sequence[Timeseries] = _user.timeseries_logs
-
         _user_id = _user.id
-
-        timeseries_logs: list[TimeseriesLog] = []
+        timeseries_logs: List[TimeseriesLog] = []
         last_position_log: Optional[PositionLogging] = None
+
         for timeseries_log in timeseries_data:
-            match timeseries_log.logtype:
-                case "POSLOG":
+            logtype = timeseries_log.logtype
+            logline = timeseries_log.logline
 
-                    _log = PositionLogging(_user_id, timeseries_log.logline)
-
+            try:
+                if logtype == "POSLOG":
+                    _log = PositionLogging(_user_id, logline)
                     last_position_log = _log
                     timeseries_logs.append(_log)
-                case "TRIGGER_ROI_ENTER":
-                    match timeseries_log.logline:
-                        case "Foraging_Banana":
+                
+                elif logtype == "TRIGGER_ROI_ENTER":
+                    if logline == "Foraging_Banana" and last_position_log:
+                        last_logged_position = last_position_log.position
+                        for banana in bananas.values():
+                            if banana.close(tuple(last_logged_position)):
+                                timeseries_logs.append(BananaPickup(_user_id, banana.index))
+                                break
+                
+                # Handle other log types if necessary
 
-                            last_logged_position = last_position_log.position
-
-                            for banana in bananas.values():
-                                if banana.close(tuple(last_logged_position)):
-
-                                    timeseries_logs.append(
-                                        BananaPickup(_user_id, banana.index)
-                                    )
-                                    break
-
-                        case _:
-                            pass
-                case _:
-                    pass
+            except ValueError as e:
+                print(f"Error processing {logtype} for user {_user.user}: {e}")
 
         _data[_user_id] = (_user, timeseries_logs)
 
     return _data
 
 
-with Session(sqlite_engine) as session, session.begin():
+def extract_event_data(session: Session, user_ids: List[int]) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Extract POSLOG entries from the Timeseries table
+    for specific user_ids.
+    Returns DataFrame: poslog_df
+    """
+    poslog_entries = session.query(Timeseries).filter(
+        Timeseries.logtype == 'POSLOG',
+        Timeseries.userdata_id.in_(user_ids)
+    ).all()
 
-    survey_usernames_with_endtimes = {
-        "4798594B": None,
-        "4BB5EA24": datetime.datetime(2024, 12, 8, 16, 29),
-        "2A9639A5": datetime.datetime(2024, 12, 8, 16, 29),
-        "696C2597": datetime.datetime(2024, 12, 8, 14, 47),
-        "D19BDA5A": datetime.datetime(2024, 12, 7, 11, 20),
-        "CCD8974B": None,
-        "4D68BDE": datetime.datetime(2024, 12, 6, 21, 10),
-        "7588E46C": datetime.datetime(2024, 12, 6, 21, 5),
-        "6503A955": datetime.datetime(2024, 12, 6, 21, 10),
-        "BF48A639": None,
-        "8E2BF216": None,
-        "3D5671FC": None,
-        "DCEE048E": None,
-        "A6CE844F": datetime.datetime(2024, 12, 5, 17, 46),
-        "452A633D": None,
-        "F2959E00": datetime.datetime(2024, 12, 5, 12, 7),
-        "8778A580": datetime.datetime(2024, 12, 5, 11, 52),
-        "EDAC146": datetime.datetime(2024, 12, 5, 11, 41),
-        "4DE88833": datetime.datetime(2024, 12, 5, 11, 35),
-        "F1555EEE": datetime.datetime(2024, 12, 5, 11, 38),
-        "275FC505": datetime.datetime(2024, 12, 5, 11, 36),
-        "B39628C": datetime.datetime(2024, 12, 5, 11, 34),
-        "8FB73E2": datetime.datetime(2024, 12, 5, 11, 17),
-        "850F2ABB": datetime.datetime(2024, 12, 5, 11, 24),
-        "E85F2688": datetime.datetime(2024, 12, 5, 11, 16),
-        "816CBFD0": datetime.datetime(2024, 12, 5, 11, 17),
-        "F0867DFE": datetime.datetime(2024, 12, 5, 11, 10),
-        "E53E0FF7": None,
-        "4B7ADA93": datetime.datetime(2024, 12, 4, 12, 1),
-        "778FC0DD": datetime.datetime(2024, 12, 3, 21, 53),
-        "C22A0327": None,
-        "7243788C": datetime.datetime(2024, 12, 3, 15, 18),
-        "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
-    }
+    poslog_data = []
+    for entry in poslog_entries:
+        try:
+            pos_log = PositionLogging(entry.userdata_id, entry.logline)
+            poslog_data.append({
+                'user_id': pos_log.user_id,
+                'x': pos_log.position[0],
+                'y': pos_log.position[1],
+                'z': pos_log.position[2],
+                'timestamp': entry.timestamp
+            })
+        except ValueError as e:
+            print(f"Error parsing POSLOG entry ID {entry.id}: {e}")
 
-    data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
+    # Create DataFrames
+    poslog_df = pd.DataFrame(poslog_data)
 
-    users = session.execute(
-        select(Userdata).where(Userdata.user.in_(survey_usernames_with_endtimes.keys()))
+    # Ensure 'user_id' is of type int
+    poslog_df['user_id'] = pd.to_numeric(poslog_df['user_id'], errors='coerce')
+
+    return poslog_df
+
+
+def associate_perspectives(poslog_df: pd.DataFrame, userdata_df: pd.DataFrame) -> pd.DataFrame:
+    """Associate POSLOG entries with user perspectives."""
+    # Ensure 'id' in userdata_df is numeric
+    userdata_df['id'] = pd.to_numeric(userdata_df['id'], errors='coerce')
+
+    # Drop entries where 'id' could not be converted to int
+    initial_userdata_count = len(userdata_df)
+    userdata_df.dropna(subset=['id'], inplace=True)
+    final_userdata_count = len(userdata_df)
+    dropped_userdata = initial_userdata_count - final_userdata_count
+    if dropped_userdata > 0:
+        print(f"Dropped {dropped_userdata} userdata entries due to invalid id.")
+
+    userdata_df['id'] = userdata_df['id'].astype(int)
+
+    # Merge POSLOG with userdata on 'user_id' and 'id'
+    merged_df = poslog_df.merge(userdata_df, left_on='user_id', right_on='id', how='left')
+
+    # Drop entries without perspective
+    merged_df.dropna(subset=['perspective'], inplace=True)
+
+    # Ensure perspective column is uppercase
+    merged_df['perspective'] = merged_df['perspective'].str.upper()
+
+    return merged_df
+
+
+def generate_heatmaps(
+    merged_df: pd.DataFrame, 
+    banana_df: pd.DataFrame,
+    total_users: int
+):
+    """Generate and save heatmaps for First Person and Third Person perspectives."""
+    # Filter for First Person and Third Person
+    first_person_df = merged_df[merged_df['perspective'] == 'FIRSTPERSON']
+    third_person_df = merged_df[merged_df['perspective'] == 'THIRDPERSON']
+
+    # Set the aesthetic style of the plots
+    sns.set(style="white")
+
+    # Define a function to plot heatmap and overlay event markers and bananas
+    def plot_heatmap(df, title, ax, bananas=None):
+        if df.empty:
+            ax.set_title(f"{title} (No Data)")
+            ax.set_xlabel('X Coordinate')
+            ax.set_ylabel('Z Coordinate')
+            return
+        sns.kdeplot(
+            x=df['x'], y=df['z'],
+            cmap="Reds", fill=True, thresh=0.05,
+            bw_adjust=0.5, ax=ax
+        )
+        ax.set_title(title)
+        ax.set_xlabel('X Coordinate')
+        ax.set_ylabel('Z Coordinate')
+
+        if bananas is not None and not bananas.empty:
+            ax.scatter(bananas['x'], bananas['z'], 
+                       c='yellow', marker='*', s=200, label='Banana', edgecolors='black')
+        ax.legend()
+
+    # Create subplots
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+
+    # Plot First Person heatmap with events and bananas
+    plot_heatmap(
+        first_person_df, 
+        'First Person Perspective', 
+        axes[0],
+        bananas=banana_df
     )
 
-    data = parse_userdata(
-        map(lambda r: r.Userdata, users), survey_usernames_with_endtimes
+    # Plot Third Person heatmap with events and bananas
+    plot_heatmap(
+        third_person_df, 
+        'Third Person Perspective', 
+        axes[1],
+        bananas=banana_df
     )
 
-    print(f"Results for {len(data)} users:")
+    plt.tight_layout()
 
-    banana_pickup_counter = Counter()
+    # Save the figure
+    plt.savefig('heatmaps_with_bananas.png')
+    plt.close()
+    print("Heatmaps with banana locations have been saved.")
 
-    for user_id, user_data in data.items():
 
-        banana_pickups: list[id] = []
+def main():
+    # Create database tables if they don't exist (optional)
+    # Base.metadata.create_all(sqlite_engine)
 
-        user, user_logs = user_data
+    # Create a new session
+    with Session(sqlite_engine) as session: 
+        survey_usernames_with_endtimes = {
+            "4798594B": None,
+            "4BB5EA24": datetime.datetime(2024, 12, 8, 16, 29),
+            "2A9639A5": datetime.datetime(2024, 12, 8, 16, 29),
+            "696C2597": datetime.datetime(2024, 12, 8, 14, 47),
+            "D19BDA5A": datetime.datetime(2024, 12, 7, 11, 20),
+            "CCD8974B": None,
+            "4D68BDE": datetime.datetime(2024, 12, 6, 21, 10),
+            "7588E46C": datetime.datetime(2024, 12, 6, 21, 5),
+            "6503A955": datetime.datetime(2024, 12, 6, 21, 10),
+            "BF48A639": None,
+            "8E2BF216": None,
+            "3D5671FC": None,
+            "DCEE048E": None,
+            "A6CE844F": datetime.datetime(2024, 12, 5, 17, 46),
+            "452A633D": None,
+            "F2959E00": datetime.datetime(2024, 12, 5, 12, 7),
+            "8778A580": datetime.datetime(2024, 12, 5, 11, 52),
+            "EDAC146": datetime.datetime(2024, 12, 5, 11, 41),
+            "4DE88833": datetime.datetime(2024, 12, 5, 11, 35),
+            "F1555EEE": datetime.datetime(2024, 12, 5, 11, 38),
+            "275FC505": datetime.datetime(2024, 12, 5, 11, 36),
+            "B39628C": datetime.datetime(2024, 12, 5, 11, 34),
+            "8FB73E2": datetime.datetime(2024, 12, 5, 11, 17),
+            "850F2ABB": datetime.datetime(2024, 12, 5, 11, 24),
+            "E85F2688": datetime.datetime(2024, 12, 5, 11, 16),
+            "816CBFD0": datetime.datetime(2024, 12, 5, 11, 17),
+            "F0867DFE": datetime.datetime(2024, 12, 5, 11, 10),
+            "E53E0FF7": None,
+            "4B7ADA93": datetime.datetime(2024, 12, 4, 12, 1),
+            "778FC0DD": datetime.datetime(2024, 12, 3, 21, 53),
+            "C22A0327": None,
+            "7243788C": datetime.datetime(2024, 12, 3, 15, 18),
+            "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
+        }
 
-        for log in user_logs:
-            match log:
-                case BananaPickup() as banana_pickup:
-                    banana_pickups.append(banana_pickup.banana_id)
-                    banana_pickup_counter[banana_pickup.banana_id] += 1
-                case _:
-                    pass
+        # Initialize an empty dictionary to hold user data
+        data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
 
-        print(f"\n\tUser {user.user} picked bananas {banana_pickups}")
+        # Fetch users whose usernames are in survey_usernames_with_endtimes
+        users_query = select(Userdata).where(Userdata.user.in_(survey_usernames_with_endtimes.keys()))
+        users_result = session.execute(users_query)
+        stmt = select(Userdata.user).where(Userdata.user.in_(survey_usernames_with_endtimes.keys()))
+    
+        # Execute the statement within the session
+        result = session.execute(stmt)
 
-        if user.endtime is not None:
+        print("haha", result.scalars().all())
+        print(list(set(result.scalars().all()) - set(list(survey_usernames_with_endtimes.keys()))))
+        users = users_result.scalars().all()
 
-            delta = datetime.datetime.strptime(
-                user.endtime, USER_TIMESTAMP_FORMAT
-            ) - datetime.datetime.strptime(user.starttime, USER_TIMESTAMP_FORMAT)
-            seconds = delta.total_seconds()
-            seconds %= (
-                60 * 60
-            )  # remove hours since we know for a fact no-one played for over an hour
-            delta = datetime.timedelta(seconds=seconds)
 
-            print(
-                f"\tUser {user.user} played from {user.starttime} until {user.endtime}, totaling {delta}"
-            )
+        # Parse userdata and associated logs
+        data = parse_userdata(users, survey_usernames_with_endtimes)
+        total_users = len(data)
+        print(f"Results for {total_users}/{len(survey_usernames_with_endtimes)} users:")
 
-            if len(banana_pickups) > 0:
-                average_bananas_per_second = seconds // len(banana_pickups)
-                delta = delta = datetime.timedelta(seconds=average_bananas_per_second)
+        banana_pickup_counter = Counter()
 
-                print(f"\tUser {user.user} picked on average one banana every {delta}")
+        # Process each user's logs
+        for user_id, user_data in data.items():
+
+            banana_pickups: list[int] = []
+
+            user, user_logs = user_data
+
+            for log in user_logs:
+                if isinstance(log, BananaPickup):
+                    banana_pickups.append(log.banana_id)
+                    banana_pickup_counter[log.banana_id] += 1
+
+            print(f"\n\tUser {user.user} picked bananas {banana_pickups}")
+
+            if user.endtime is not None:
+
+                delta = datetime.datetime.strptime(
+                    user.endtime, USER_TIMESTAMP_FORMAT
+                ) - datetime.datetime.strptime(user.starttime, USER_TIMESTAMP_FORMAT)
+                seconds = delta.total_seconds()
+                seconds %= (
+                    60 * 60
+                )  # remove hours since we know for a fact no-one played for over an hour
+                delta = datetime.timedelta(seconds=seconds)
+
+                print(
+                    f"\tUser {user.user} played from {user.starttime} until {user.endtime}, totaling {delta}"
+                )
+
+                if len(banana_pickups) > 0:
+                    average_bananas_per_second = seconds / len(banana_pickups)
+                    delta_avg = datetime.timedelta(seconds=average_bananas_per_second)
+
+                    print(f"\tUser {user.user} picked on average one banana every {delta_avg}")
+                else:
+                    print(f"\tUser {user.user} didn't pick any bananas")
+
             else:
-                print(f"\tUser {user.user} didn't pick any bananas")
+                print(f"\tCannot calculate game duration for user {user.user}")
+                print(f"\tCannot calculate average banana pick rate for user {user.user}")
 
-        else:
-            print(f"\tCannot calculate game duration for user {user.user}")
-            print(f"\tCannot calculate average banana pick rate for user {user.user}")
+        print(f"\nBanana pick counts: {banana_pickup_counter}")
 
-    print(f"\nBanana pick counts: {banana_pickup_counter}")
+        # **Collect user_ids for survey users**
+        user_ids = list(data.keys())
+
+        # Extract event data for these user_ids
+        poslog_df = extract_event_data(session, user_ids)
+
+        # Fetch all userdata for merging
+        userdata_query = select(Userdata).where(Userdata.id.in_(user_ids))
+        userdata_df = pd.read_sql(userdata_query, sqlite_engine)
+
+        # Associate perspectives
+        merged_df = associate_perspectives(poslog_df, userdata_df)
+        print(merged_df)
+        print(merged_df.columns)
+
+        # Extract banana positions into a DataFrame
+        banana_df = get_banana_positions(bananas)
+        print(banana_df)
+
+        # Generate and save Heatmaps with Events and Bananas
+        generate_heatmaps(merged_df, banana_df, total_users)
+
+if __name__ == "__main__":
+    main()
+
