@@ -15,7 +15,7 @@ import pandas as pd
 import seaborn as sns
 
 # Use 'Agg' backend for non-interactive environments
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -67,7 +67,16 @@ class PositionLogging(TimeseriesLog):
 
         self.position = tuple(map(float, position[1:-1].split(", ")))
         self.rotation = tuple(map(float, rotation[1:-1].split(", ")))
-        self.rotation_euler = tuple(rotation_euler.split(","))
+
+        rotation_euler_parts = rotation_euler.split(",")
+        if len(rotation_euler_parts) > 2:  # multiple commas
+            rotation_euler_parts = [
+                f"{rotation_euler_parts[0]}.{rotation_euler_parts[1]}",
+                f"{rotation_euler_parts[2]}.{rotation_euler_parts[3]}",
+            ]  # TODO: remove this if this might blow up
+
+        self.rotation_euler = tuple(map(float, rotation_euler_parts))
+
         self.pos_delta = float(fix_floats(pos_delta.split(":")[1]))
         self.rot_delta = float(fix_floats(rot_delta.split(":")[1]))
         self.path_distance = float(fix_floats(path_distance.split(":")[1]))
@@ -79,6 +88,7 @@ class BananaPickup(TimeseriesLog):
     def __init__(self, user_id: int, banana_id: int):
         super().__init__(user_id)
         self.banana_id = banana_id
+
 
 class Banana:
 
@@ -146,18 +156,20 @@ def get_banana_positions(bananas: Dict[int, Banana]) -> pd.DataFrame:
     """Extracts banana positions into a DataFrame."""
     banana_data = []
     for banana in bananas.values():
-        banana_data.append({
-            'banana_id': banana.index,
-            'x': banana.pos[0],
-            'y': banana.pos[1],
-            'z': banana.pos[2]
-        })
+        banana_data.append(
+            {
+                "banana_id": banana.index,
+                "x": banana.pos[0],
+                "y": banana.pos[1],
+                "z": banana.pos[2],
+            }
+        )
     return pd.DataFrame(banana_data)
 
 
 def parse_userdata(
-    _users: Sequence[Userdata], 
-    usernames_with_endtimes: Dict[str, Optional[datetime.datetime]]
+    _users: Sequence[Userdata],
+    usernames_with_endtimes: Dict[str, Optional[datetime.datetime]],
 ) -> Dict[int, Tuple[Userdata, List[TimeseriesLog]]]:
     _data: Dict[int, Tuple[Userdata, List[TimeseriesLog]]] = {}
 
@@ -181,15 +193,17 @@ def parse_userdata(
                     _log = PositionLogging(_user_id, logline)
                     last_position_log = _log
                     timeseries_logs.append(_log)
-                
+
                 elif logtype == "TRIGGER_ROI_ENTER":
                     if logline == "Foraging_Banana" and last_position_log:
                         last_logged_position = last_position_log.position
                         for banana in bananas.values():
                             if banana.close(tuple(last_logged_position)):
-                                timeseries_logs.append(BananaPickup(_user_id, banana.index))
+                                timeseries_logs.append(
+                                    BananaPickup(_user_id, banana.index)
+                                )
                                 break
-                
+
                 # Handle other log types if necessary
 
             except ValueError as e:
@@ -200,28 +214,33 @@ def parse_userdata(
     return _data
 
 
-def extract_event_data(session: Session, user_ids: List[int]) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def extract_event_data(
+    session: Session, user_ids: List[int]
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Extract POSLOG entries from the Timeseries table
     for specific user_ids.
     Returns DataFrame: poslog_df
     """
-    poslog_entries = session.query(Timeseries).filter(
-        Timeseries.logtype == 'POSLOG',
-        Timeseries.userdata_id.in_(user_ids)
-    ).all()
+    poslog_entries = (
+        session.query(Timeseries)
+        .filter(Timeseries.logtype == "POSLOG", Timeseries.userdata_id.in_(user_ids))
+        .all()
+    )
 
     poslog_data = []
     for entry in poslog_entries:
         try:
             pos_log = PositionLogging(entry.userdata_id, entry.logline)
-            poslog_data.append({
-                'user_id': pos_log.user_id,
-                'x': pos_log.position[0],
-                'y': pos_log.position[1],
-                'z': pos_log.position[2],
-                'timestamp': entry.timestamp
-            })
+            poslog_data.append(
+                {
+                    "user_id": pos_log.user_id,
+                    "x": pos_log.position[0],
+                    "y": pos_log.position[1],
+                    "z": pos_log.position[2],
+                    "timestamp": entry.timestamp,
+                }
+            )
         except ValueError as e:
             print(f"Error parsing POSLOG entry ID {entry.id}: {e}")
 
@@ -229,47 +248,49 @@ def extract_event_data(session: Session, user_ids: List[int]) -> Tuple[pd.DataFr
     poslog_df = pd.DataFrame(poslog_data)
 
     # Ensure 'user_id' is of type int
-    poslog_df['user_id'] = pd.to_numeric(poslog_df['user_id'], errors='coerce')
+    poslog_df["user_id"] = pd.to_numeric(poslog_df["user_id"], errors="coerce")
 
     return poslog_df
 
 
-def associate_perspectives(poslog_df: pd.DataFrame, userdata_df: pd.DataFrame) -> pd.DataFrame:
+def associate_perspectives(
+    poslog_df: pd.DataFrame, userdata_df: pd.DataFrame
+) -> pd.DataFrame:
     """Associate POSLOG entries with user perspectives."""
     # Ensure 'id' in userdata_df is numeric
-    userdata_df['id'] = pd.to_numeric(userdata_df['id'], errors='coerce')
+    userdata_df["id"] = pd.to_numeric(userdata_df["id"], errors="coerce")
 
     # Drop entries where 'id' could not be converted to int
     initial_userdata_count = len(userdata_df)
-    userdata_df.dropna(subset=['id'], inplace=True)
+    userdata_df.dropna(subset=["id"], inplace=True)
     final_userdata_count = len(userdata_df)
     dropped_userdata = initial_userdata_count - final_userdata_count
     if dropped_userdata > 0:
         print(f"Dropped {dropped_userdata} userdata entries due to invalid id.")
 
-    userdata_df['id'] = userdata_df['id'].astype(int)
+    userdata_df["id"] = userdata_df["id"].astype(int)
 
     # Merge POSLOG with userdata on 'user_id' and 'id'
-    merged_df = poslog_df.merge(userdata_df, left_on='user_id', right_on='id', how='left')
+    merged_df = poslog_df.merge(
+        userdata_df, left_on="user_id", right_on="id", how="left"
+    )
 
     # Drop entries without perspective
-    merged_df.dropna(subset=['perspective'], inplace=True)
+    merged_df.dropna(subset=["perspective"], inplace=True)
 
     # Ensure perspective column is uppercase
-    merged_df['perspective'] = merged_df['perspective'].str.upper()
+    merged_df["perspective"] = merged_df["perspective"].str.upper()
 
     return merged_df
 
 
 def generate_heatmaps(
-    merged_df: pd.DataFrame, 
-    banana_df: pd.DataFrame,
-    total_users: int
+    merged_df: pd.DataFrame, banana_df: pd.DataFrame, total_users: int
 ):
     """Generate and save heatmaps for First Person and Third Person perspectives."""
     # Filter for First Person and Third Person
-    first_person_df = merged_df[merged_df['perspective'] == 'FIRSTPERSON']
-    third_person_df = merged_df[merged_df['perspective'] == 'THIRDPERSON']
+    first_person_df = merged_df[merged_df["perspective"] == "FIRSTPERSON"]
+    third_person_df = merged_df[merged_df["perspective"] == "THIRDPERSON"]
 
     # Set the aesthetic style of the plots
     sns.set(style="white")
@@ -278,21 +299,32 @@ def generate_heatmaps(
     def plot_heatmap(df, title, ax, bananas=None):
         if df.empty:
             ax.set_title(f"{title} (No Data)")
-            ax.set_xlabel('X Coordinate')
-            ax.set_ylabel('Z Coordinate')
+            ax.set_xlabel("X Coordinate")
+            ax.set_ylabel("Z Coordinate")
             return
         sns.kdeplot(
-            x=df['x'], y=df['z'],
-            cmap="Reds", fill=True, thresh=0.05,
-            bw_adjust=0.5, ax=ax
+            x=df["x"],
+            y=df["z"],
+            cmap="Reds",
+            fill=True,
+            thresh=0.05,
+            bw_adjust=0.5,
+            ax=ax,
         )
         ax.set_title(title)
-        ax.set_xlabel('X Coordinate')
-        ax.set_ylabel('Z Coordinate')
+        ax.set_xlabel("X Coordinate")
+        ax.set_ylabel("Z Coordinate")
 
         if bananas is not None and not bananas.empty:
-            ax.scatter(bananas['x'], bananas['z'], 
-                       c='yellow', marker='*', s=200, label='Banana', edgecolors='black')
+            ax.scatter(
+                bananas["x"],
+                bananas["z"],
+                c="yellow",
+                marker="*",
+                s=200,
+                label="Banana",
+                edgecolors="black",
+            )
         ax.legend()
 
     # Create subplots
@@ -300,24 +332,18 @@ def generate_heatmaps(
 
     # Plot First Person heatmap with events and bananas
     plot_heatmap(
-        first_person_df, 
-        'First Person Perspective', 
-        axes[0],
-        bananas=banana_df
+        first_person_df, "First Person Perspective", axes[0], bananas=banana_df
     )
 
     # Plot Third Person heatmap with events and bananas
     plot_heatmap(
-        third_person_df, 
-        'Third Person Perspective', 
-        axes[1],
-        bananas=banana_df
+        third_person_df, "Third Person Perspective", axes[1], bananas=banana_df
     )
 
     plt.tight_layout()
 
     # Save the figure
-    plt.savefig('heatmaps_with_bananas.png')
+    plt.savefig("heatmaps_with_bananas.png")
     plt.close()
     print("Heatmaps with banana locations have been saved.")
 
@@ -327,7 +353,7 @@ def main():
     # Base.metadata.create_all(sqlite_engine)
 
     # Create a new session
-    with Session(sqlite_engine) as session: 
+    with Session(sqlite_engine) as session:
         survey_usernames_with_endtimes = {
             "4798594B": None,
             "4BB5EA24": datetime.datetime(2024, 12, 8, 16, 29),
@@ -364,21 +390,49 @@ def main():
             "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
         }
 
+        survey_user_ids = [
+            1,
+            9,
+            11,
+            12,
+            18,
+            19,
+            21,
+            23,
+            24,
+            22,
+            25,
+            26,
+            28,
+            42,
+            54,
+            7,
+            14,
+            16,
+            15,
+            27,
+            37,
+            38,
+            41,
+            56,
+            62,
+            68,
+            70,
+            71,
+            72,
+            78,
+        ]
+
         # Initialize an empty dictionary to hold user data
         data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
 
         # Fetch users whose usernames are in survey_usernames_with_endtimes
-        users_query = select(Userdata).where(Userdata.user.in_(survey_usernames_with_endtimes.keys()))
+        users_query = select(Userdata).where(
+            Userdata.id.in_(survey_user_ids)
+        )
         users_result = session.execute(users_query)
-        stmt = select(Userdata.user).where(Userdata.user.in_(survey_usernames_with_endtimes.keys()))
-    
-        # Execute the statement within the session
-        result = session.execute(stmt)
 
-        print("haha", result.scalars().all())
-        print(list(set(result.scalars().all()) - set(list(survey_usernames_with_endtimes.keys()))))
         users = users_result.scalars().all()
-
 
         # Parse userdata and associated logs
         data = parse_userdata(users, survey_usernames_with_endtimes)
@@ -388,7 +442,7 @@ def main():
         banana_pickup_counter = Counter()
 
         # Process each user's logs
-        for user_id, user_data in data.items():
+        for user_data in data.values():
 
             banana_pickups: list[int] = []
 
@@ -420,13 +474,17 @@ def main():
                     average_bananas_per_second = seconds / len(banana_pickups)
                     delta_avg = datetime.timedelta(seconds=average_bananas_per_second)
 
-                    print(f"\tUser {user.user} picked on average one banana every {delta_avg}")
+                    print(
+                        f"\tUser {user.user} picked on average one banana every {delta_avg}"
+                    )
                 else:
                     print(f"\tUser {user.user} didn't pick any bananas")
 
             else:
                 print(f"\tCannot calculate game duration for user {user.user}")
-                print(f"\tCannot calculate average banana pick rate for user {user.user}")
+                print(
+                    f"\tCannot calculate average banana pick rate for user {user.user}"
+                )
 
         print(f"\nBanana pick counts: {banana_pickup_counter}")
 
@@ -452,6 +510,6 @@ def main():
         # Generate and save Heatmaps with Events and Bananas
         generate_heatmaps(merged_df, banana_df, total_users)
 
+
 if __name__ == "__main__":
     main()
-
