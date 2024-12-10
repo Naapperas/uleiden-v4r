@@ -419,6 +419,7 @@ def main():
         global_curiosity_feedback = []
         user_ids_for_heatmap = []
         user_stats: list[UserStats] = []
+        session_playtimes = []
 
         # Process each user's logs
         for user_data in data.values():
@@ -449,6 +450,7 @@ def main():
 
             perspective_counter[user.perspective] += 1
             user_ids_for_heatmap.append(user.id)
+            session_playtimes.append(play_session_duration_seconds)
 
             banana_pickups: list[int] = []
             curiosity_feedback = []
@@ -503,6 +505,7 @@ def main():
             )
 
             user_stats.append(stats)
+
         # Extract event data for these user_ids
         poslog_df = pd.DataFrame(position_data)
         poslog_df["user_id"] = pd.to_numeric(poslog_df["user_id"], errors="coerce")
@@ -525,6 +528,7 @@ def main():
             "bananaPickupCounts": banana_pickup_counter,
             "globalCuriosityIndex": sum(global_curiosity_feedback)
             / len(global_curiosity_feedback),
+            "averagePlayTimeSeconds": sum(session_playtimes) / len(session_playtimes),
         }
         print(
             json.dumps(
