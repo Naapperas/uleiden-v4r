@@ -8,6 +8,8 @@ from functools import reduce
 from itertools import combinations
 from operator import add
 from pathlib import Path
+import json
+from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import matplotlib
@@ -98,7 +100,7 @@ class ROIVisit(TimeseriesLog):
 class Curiosity(TimeseriesLog):
     def __init__(self, user_id: int, timestamp: str, curiosity: float):
         super().__init__(user_id, timestamp)
-        self._curiosity = curiosity
+        self.curiosity = curiosity
 
 
 class Banana:
@@ -135,6 +137,26 @@ class Banana:
     def close(self, other_pos: tuple[float, float, float]) -> bool:
         _dist_squared = self.dist_squared(other_pos)
         return _dist_squared <= Banana.ALLOWED_DISTANCE_SQUARED
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class UserStats:
+    # User specific metadata
+    user_id: int
+    user_username: str
+    perspective: str
+
+    # User session data
+    session_starttime: str
+    session_endtime: str
+    session_duration_seconds: int
+    session_duration_str: str
+
+    banana_pickups: list
+
+    average_rate_seconds_per_banana: int
+
+    average_curiosity_index: float
 
 
 # Initialize bananas
@@ -212,6 +234,12 @@ def parse_userdata(
                             timeseries_logs.append(
                                 ROIVisit(_user_id, timestamp, logline)
                             )
+                    case "FEEDBACK":
+                        timeseries_logs.append(
+                            Curiosity(
+                                _user_id, timestamp, float(logline.replace(",", "."))
+                            )
+                        )
 
             except ValueError as e:
                 print(f"Error processing {logtype} for user {_user.user}: {e}")
@@ -321,7 +349,7 @@ def generate_heatmaps(merged_df: pd.DataFrame):
     plt.tight_layout()
 
     # Save the figure
-    plt.savefig("heatmaps_with_bananas.png")
+    plt.savefig("data/heatmaps_with_bananas.png")
     plt.close()
     print("Heatmaps with banana locations have been saved.")
 
@@ -368,40 +396,6 @@ def main():
             "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
         }
 
-        # These were obtained after filtering for time
-        survey_user_ids = [
-            1,
-            9,
-            11,
-            12,
-            18,
-            19,
-            21,
-            23,
-            24,
-            22,
-            25,
-            26,
-            28,
-            42,
-            54,
-            7,
-            14,
-            16,
-            15,
-            27,
-            37,
-            38,
-            41,
-            56,
-            62,
-            68,
-            70,
-            71,
-            72,
-            78,
-        ]
-
         # Initialize an empty dictionary to hold user data
         data: dict[int, tuple[Userdata, list[TimeseriesLog]]] = {}
 
@@ -417,37 +411,47 @@ def main():
         total_users = len(data)
         print(f"Results for {total_users}/{len(survey_usernames_with_endtimes)} users:")
 
-        # Data aggregators
+        # Global data aggregators
         banana_pickup_counter: dict[str, Counter] = {}
         roi_visit_counter: dict[str, Counter] = {}
+        perspective_counter = Counter()
         position_data = []
+        global_curiosity_feedback = []
+        user_ids_for_heatmap = []
+        user_stats: list[UserStats] = []
 
         # Process each user's logs
         for user_data in data.values():
             user, user_logs = user_data
 
             if user.endtime is None:
-                print(f"No recorded end time for user {user.user}, skipping")
+                print(f"\n\tNo recorded end time for user {user.user}, skipping")
                 continue
 
             play_session_duration = datetime.datetime.strptime(
                 user.endtime, USER_TIMESTAMP_FORMAT
             ) - datetime.datetime.strptime(user.starttime, USER_TIMESTAMP_FORMAT)
-            seconds = play_session_duration.total_seconds()
-            seconds %= (
+            play_session_duration_seconds = play_session_duration.total_seconds()
+            play_session_duration_seconds %= (
                 60 * 60
             )  # remove hours since we know for a fact no-one played for over an hour
-            play_session_duration = datetime.timedelta(seconds=seconds)
+            play_session_duration = datetime.timedelta(
+                seconds=play_session_duration_seconds
+            )
 
             if play_session_duration < datetime.timedelta(
                 minutes=PLAYTIME_MINIMUM_DURATION_MINUTES
             ):
                 print(
-                    f"User {user.user} didn't play for enough time ({play_session_duration}), skipping"
+                    f"\n\tUser {user.user} didn't play for enough time ({play_session_duration}), skipping"
                 )
                 continue
 
+            perspective_counter[user.perspective] += 1
+            user_ids_for_heatmap.append(user.id)
+
             banana_pickups: list[int] = []
+            curiosity_feedback = []
 
             for log in user_logs:
 
@@ -468,42 +472,45 @@ def main():
                             }
                         )
                     case ROIVisit():
-
                         if log.roi_name not in roi_visit_counter:
                             roi_visit_counter[log.roi_name] = Counter()
 
                         roi_visit_counter[log.roi_name][user.perspective] += 1
+                    case Curiosity():
+                        curiosity_value = log.curiosity
 
-            print(f"\n\tUser {user.user} picked bananas {banana_pickups}")
+                        curiosity_feedback.append(curiosity_value)
+                        global_curiosity_feedback.append(curiosity_value)
 
-            print(
-                f"\tUser {user.user} played from {user.starttime} until {user.endtime}, totaling {play_session_duration}"
+            stats = UserStats(
+                user_id=user.id,
+                user_username=user.user,
+                perspective=user.perspective,
+                session_starttime=user.starttime,
+                session_endtime=user.endtime,
+                session_duration_seconds=play_session_duration.total_seconds(),
+                session_duration_str=str(play_session_duration),
+                banana_pickups=banana_pickups,
+                average_rate_seconds_per_banana=(
+                    datetime.timedelta(
+                        seconds=play_session_duration_seconds / len(banana_pickups)
+                    ).total_seconds()
+                    if len(banana_pickups) > 0
+                    else -1
+                ),
+                average_curiosity_index=sum(curiosity_feedback)
+                / len(global_curiosity_feedback),
             )
 
-            if len(banana_pickups) > 0:
-                average_bananas_per_second = seconds / len(banana_pickups)
-                delta_avg = datetime.timedelta(seconds=average_bananas_per_second)
-
-                print(
-                    f"\tUser {user.user} picked on average one banana every {delta_avg}"
-                )
-            else:
-                print(f"\tUser {user.user} didn't pick any bananas")
-
-        print(f"\nBanana pick counts: {banana_pickup_counter}")
-        print(f"\nROI visit counts: {roi_visit_counter}")
-
-        # Use this instead of going with 'survey_user_ids' because something unexpected
-
-        # might have happened and we know that these are up to date
-        user_ids = list(data.keys())
-
+            user_stats.append(stats)
         # Extract event data for these user_ids
         poslog_df = pd.DataFrame(position_data)
         poslog_df["user_id"] = pd.to_numeric(poslog_df["user_id"], errors="coerce")
 
         # Fetch all userdata for merging
-        userdata_query = select(Userdata).where(Userdata.id.in_(user_ids))
+        userdata_query = select(Userdata).where(
+            Userdata.id.in_(user_ids_for_heatmap)
+        )  # Nuno - I don't really like this since we already have the data available but whatever
         userdata_df = pd.read_sql(userdata_query, sqlite_engine)
 
         # Associate perspectives with position logging
@@ -511,6 +518,32 @@ def main():
 
         # Generate and save Heatmaps with Events and Bananas
         generate_heatmaps(player_data_pos_df)
+
+        global_stats = {
+            "perspectiveCount": perspective_counter,
+            "roiVisitCount": roi_visit_counter,
+            "bananaPickupCounts": banana_pickup_counter,
+            "globalCuriosityIndex": sum(global_curiosity_feedback)
+            / len(global_curiosity_feedback),
+        }
+        print(
+            json.dumps(
+                global_stats,
+                indent=4,
+            )
+        )
+
+        with open("data/stats.json", "w", encoding="utf-8") as stats:
+            stats.write(
+                json.dumps(
+                    global_stats,
+                    indent=4,
+                )
+            )
+
+        user_stats_df = pd.DataFrame.from_records([asdict(stat) for stat in user_stats])
+        print(user_stats_df)
+        user_stats_df.to_csv("data/user_stats.csv", index=False)
 
 
 if __name__ == "__main__":

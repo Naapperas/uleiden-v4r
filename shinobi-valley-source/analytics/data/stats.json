@@ -1,0 +1,93 @@
+{
+    "perspectiveCount": {
+        "THIRDPERSON": 15,
+        "FIRSTPERSON": 14
+    },
+    "roiVisitCount": {
+        "Obstruction_Forest_B": {
+            "THIRDPERSON": 9,
+            "FIRSTPERSON": 4
+        },
+        "OufofPlace_StoneStack_B": {
+            "THIRDPERSON": 7,
+            "FIRSTPERSON": 3
+        },
+        "Connections_HillPath": {
+            "THIRDPERSON": 10,
+            "FIRSTPERSON": 6
+        },
+        "OufofPlace_StoneSpiral": {
+            "THIRDPERSON": 7,
+            "FIRSTPERSON": 4
+        },
+        "Obstruction_GroundFog": {
+            "THIRDPERSON": 6,
+            "FIRSTPERSON": 14
+        },
+        "OufofPlace_StoneStack_A": {
+            "FIRSTPERSON": 10,
+            "THIRDPERSON": 10
+        },
+        "Extreme_Mountain_B": {
+            "THIRDPERSON": 14,
+            "FIRSTPERSON": 27
+        },
+        "Extreme_Mountain_C": {
+            "THIRDPERSON": 4,
+            "FIRSTPERSON": 5
+        },
+        "Connections_CliffCave": {
+            "THIRDPERSON": 9,
+            "FIRSTPERSON": 9
+        },
+        "Extreme_Mountain_A": {
+            "FIRSTPERSON": 10,
+            "THIRDPERSON": 4
+        },
+        "Obstruction_Forest_A": {
+            "FIRSTPERSON": 4
+        },
+        "Connections_MountainCave": {
+            "THIRDPERSON": 4
+        }
+    },
+    "bananaPickupCounts": {
+        "6": {
+            "THIRDPERSON": 9,
+            "FIRSTPERSON": 8
+        },
+        "9": {
+            "THIRDPERSON": 4,
+            "FIRSTPERSON": 2
+        },
+        "2": {
+            "THIRDPERSON": 8,
+            "FIRSTPERSON": 6
+        },
+        "1": {
+            "THIRDPERSON": 8,
+            "FIRSTPERSON": 6
+        },
+        "5": {
+            "THIRDPERSON": 9,
+            "FIRSTPERSON": 7
+        },
+        "3": {
+            "FIRSTPERSON": 9,
+            "THIRDPERSON": 9
+        },
+        "8": {
+            "THIRDPERSON": 4,
+            "FIRSTPERSON": 4
+        },
+        "7": {
+            "THIRDPERSON": 3,
+            "FIRSTPERSON": 6
+        },
+        "4": {
+            "FIRSTPERSON": 7,
+            "THIRDPERSON": 3
+        }
+    },
+    "globalCuriosityIndex": 0.624639175257732
+}

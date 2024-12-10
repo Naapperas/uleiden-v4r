@@ -2,12 +2,14 @@ SHELL := /bin/bash
 
 all:
 	@source ./bin/activate
-	pip install -r requirements.txt
+	@pip install -r requirements.txt
 	python src/process.py
-	deactivate
+	@deactivate
+	@exit
 
 format:
 	@source ./bin/activate
-	pip install -r requirements.txt
+	@pip install -r requirements.txt
 	black .
-	deactivate
+	@deactivate
+	@exit
