@@ -25,9 +25,6 @@ from models import (  # Ensure models.py is in the same directory
     Userdata,
 )
 
-# Define constants
-USER_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
-
 # Define the current working directory and database file path
 current_working_directory = Path.cwd()
 db_file_path = f"sqlite:///{str(current_working_directory.parent.joinpath('server-assets', 'db.db'))}"
@@ -37,16 +34,18 @@ sqlite_engine = create_engine(db_file_path, echo=False)
 
 # Define the timestamp format
 USER_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+PLAYTIME_MINIMUM_DURATION_MINUTES = 5
 
 
 class TimeseriesLog(ABC):
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, timestamp: str):
         self.user_id = user_id
+        self.timestamp = timestamp
 
 
 class PositionLogging(TimeseriesLog):
-    def __init__(self, _user_id: int, logline: str):
-        super().__init__(_user_id)
+    def __init__(self, _user_id: int, timestamp: str, logline: str):
+        super().__init__(_user_id, timestamp)
         self.process_logline(logline)
 
     def process_logline(self, logline: str):
@@ -85,9 +84,21 @@ class PositionLogging(TimeseriesLog):
 
 
 class BananaPickup(TimeseriesLog):
-    def __init__(self, user_id: int, banana_id: int):
-        super().__init__(user_id)
+    def __init__(self, user_id: int, timestamp: str, banana_id: int):
+        super().__init__(user_id, timestamp)
         self.banana_id = banana_id
+
+
+class ROIVisit(TimeseriesLog):
+    def __init__(self, user_id: int, timestamp: str, roi_name: int):
+        super().__init__(user_id, timestamp)
+        self.roi_name = roi_name
+
+
+class Curiosity(TimeseriesLog):
+    def __init__(self, user_id: int, timestamp: str, curiosity: float):
+        super().__init__(user_id, timestamp)
+        self._curiosity = curiosity
 
 
 class Banana:
@@ -152,21 +163,6 @@ for pair in combinations(bananas.values(), 2):
 Banana.ALLOWED_DISTANCE_SQUARED *= 0.25
 
 
-def get_banana_positions(bananas: Dict[int, Banana]) -> pd.DataFrame:
-    """Extracts banana positions into a DataFrame."""
-    banana_data = []
-    for banana in bananas.values():
-        banana_data.append(
-            {
-                "banana_id": banana.index,
-                "x": banana.pos[0],
-                "y": banana.pos[1],
-                "z": banana.pos[2],
-            }
-        )
-    return pd.DataFrame(banana_data)
-
-
 def parse_userdata(
     _users: Sequence[Userdata],
     usernames_with_endtimes: Dict[str, Optional[datetime.datetime]],
@@ -174,37 +170,48 @@ def parse_userdata(
     _data: Dict[int, Tuple[Userdata, List[TimeseriesLog]]] = {}
 
     for _user in _users:
-        if _user.endtime is None:
-            possible_endtime = usernames_with_endtimes.get(_user.user, None)
-            if possible_endtime is not None:
-                _user.endtime = possible_endtime.strftime(USER_TIMESTAMP_FORMAT)
-
         timeseries_data: Sequence[Timeseries] = _user.timeseries_logs
         _user_id = _user.id
         timeseries_logs: List[TimeseriesLog] = []
         last_position_log: Optional[PositionLogging] = None
 
+        if _user.endtime is None:
+            possible_endtime = usernames_with_endtimes.get(_user.user, None)
+
+            # The rationale is that the noted down end times are more reliable than the logs' timestamps
+            # because we might have logs from when the users were already in an invalid game state
+            # but you gotta do what you gotta do
+
+            if possible_endtime is not None:
+                _user.endtime = possible_endtime.strftime(USER_TIMESTAMP_FORMAT)
+            else:  # heuristic to have a rough estimate of the total play-time, just use the last log's timestamp
+                _user.endtime = timeseries_data[-1].timestamp
+
         for timeseries_log in timeseries_data:
             logtype = timeseries_log.logtype
             logline = timeseries_log.logline
+            timestamp = timeseries_log.timestamp
 
             try:
-                if logtype == "POSLOG":
-                    _log = PositionLogging(_user_id, logline)
-                    last_position_log = _log
-                    timeseries_logs.append(_log)
+                match logtype:
+                    case "POSLOG":
+                        _log = PositionLogging(_user_id, timestamp, logline)
+                        last_position_log = _log
+                        timeseries_logs.append(_log)
 
-                elif logtype == "TRIGGER_ROI_ENTER":
-                    if logline == "Foraging_Banana" and last_position_log:
-                        last_logged_position = last_position_log.position
-                        for banana in bananas.values():
-                            if banana.close(tuple(last_logged_position)):
-                                timeseries_logs.append(
-                                    BananaPickup(_user_id, banana.index)
-                                )
-                                break
-
-                # Handle other log types if necessary
+                    case "TRIGGER_ROI_ENTER":
+                        if logline == "Foraging_Banana" and last_position_log:
+                            last_logged_position = last_position_log.position
+                            for banana in bananas.values():
+                                if banana.close(last_logged_position):
+                                    timeseries_logs.append(
+                                        BananaPickup(_user_id, timestamp, banana.index)
+                                    )
+                                    break
+                        else:
+                            timeseries_logs.append(
+                                ROIVisit(_user_id, timestamp, logline)
+                            )
 
             except ValueError as e:
                 print(f"Error processing {logtype} for user {_user.user}: {e}")
@@ -212,45 +219,6 @@ def parse_userdata(
         _data[_user_id] = (_user, timeseries_logs)
 
     return _data
-
-
-def extract_event_data(
-    session: Session, user_ids: List[int]
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """
-    Extract POSLOG entries from the Timeseries table
-    for specific user_ids.
-    Returns DataFrame: poslog_df
-    """
-    poslog_entries = (
-        session.query(Timeseries)
-        .filter(Timeseries.logtype == "POSLOG", Timeseries.userdata_id.in_(user_ids))
-        .all()
-    )
-
-    poslog_data = []
-    for entry in poslog_entries:
-        try:
-            pos_log = PositionLogging(entry.userdata_id, entry.logline)
-            poslog_data.append(
-                {
-                    "user_id": pos_log.user_id,
-                    "x": pos_log.position[0],
-                    "y": pos_log.position[1],
-                    "z": pos_log.position[2],
-                    "timestamp": entry.timestamp,
-                }
-            )
-        except ValueError as e:
-            print(f"Error parsing POSLOG entry ID {entry.id}: {e}")
-
-    # Create DataFrames
-    poslog_df = pd.DataFrame(poslog_data)
-
-    # Ensure 'user_id' is of type int
-    poslog_df["user_id"] = pd.to_numeric(poslog_df["user_id"], errors="coerce")
-
-    return poslog_df
 
 
 def associate_perspectives(
@@ -284,13 +252,23 @@ def associate_perspectives(
     return merged_df
 
 
-def generate_heatmaps(
-    merged_df: pd.DataFrame, banana_df: pd.DataFrame, total_users: int
-):
+def generate_heatmaps(merged_df: pd.DataFrame):
     """Generate and save heatmaps for First Person and Third Person perspectives."""
     # Filter for First Person and Third Person
     first_person_df = merged_df[merged_df["perspective"] == "FIRSTPERSON"]
     third_person_df = merged_df[merged_df["perspective"] == "THIRDPERSON"]
+
+    banana_data = []
+    for banana in bananas.values():
+        banana_data.append(
+            {
+                "banana_id": banana.index,
+                "x": banana.pos[0],
+                "y": banana.pos[1],
+                "z": banana.pos[2],
+            }
+        )
+    banana_df = pd.DataFrame(banana_data)
 
     # Set the aesthetic style of the plots
     sns.set(style="white")
@@ -390,6 +368,7 @@ def main():
             "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
         }
 
+        # These were obtained after filtering for time
         survey_user_ids = [
             1,
             9,
@@ -428,10 +407,9 @@ def main():
 
         # Fetch users whose usernames are in survey_usernames_with_endtimes
         users_query = select(Userdata).where(
-            Userdata.id.in_(survey_user_ids)
+            Userdata.user.in_(survey_usernames_with_endtimes)
         )
         users_result = session.execute(users_query)
-
         users = users_result.scalars().all()
 
         # Parse userdata and associated logs
@@ -439,76 +417,100 @@ def main():
         total_users = len(data)
         print(f"Results for {total_users}/{len(survey_usernames_with_endtimes)} users:")
 
-        banana_pickup_counter = Counter()
+        # Data aggregators
+        banana_pickup_counter: dict[str, Counter] = {}
+        roi_visit_counter: dict[str, Counter] = {}
+        position_data = []
 
         # Process each user's logs
         for user_data in data.values():
+            user, user_logs = user_data
+
+            if user.endtime is None:
+                print(f"No recorded end time for user {user.user}, skipping")
+                continue
+
+            play_session_duration = datetime.datetime.strptime(
+                user.endtime, USER_TIMESTAMP_FORMAT
+            ) - datetime.datetime.strptime(user.starttime, USER_TIMESTAMP_FORMAT)
+            seconds = play_session_duration.total_seconds()
+            seconds %= (
+                60 * 60
+            )  # remove hours since we know for a fact no-one played for over an hour
+            play_session_duration = datetime.timedelta(seconds=seconds)
+
+            if play_session_duration < datetime.timedelta(
+                minutes=PLAYTIME_MINIMUM_DURATION_MINUTES
+            ):
+                print(
+                    f"User {user.user} didn't play for enough time ({play_session_duration}), skipping"
+                )
+                continue
 
             banana_pickups: list[int] = []
 
-            user, user_logs = user_data
-
             for log in user_logs:
-                if isinstance(log, BananaPickup):
-                    banana_pickups.append(log.banana_id)
-                    banana_pickup_counter[log.banana_id] += 1
+
+                match log:
+                    case BananaPickup():
+                        banana_pickups.append(log.banana_id)
+
+                        if log.banana_id not in banana_pickup_counter:
+                            banana_pickup_counter[log.banana_id] = Counter()
+
+                        banana_pickup_counter[log.banana_id][user.perspective] += 1
+                    case PositionLogging():
+                        position_data.append(
+                            {
+                                "timestamp": log.timestamp,
+                                "user_id": log.user_id,
+                                **dict(zip(("x", "y", "z"), log.position)),
+                            }
+                        )
+                    case ROIVisit():
+
+                        if log.roi_name not in roi_visit_counter:
+                            roi_visit_counter[log.roi_name] = Counter()
+
+                        roi_visit_counter[log.roi_name][user.perspective] += 1
 
             print(f"\n\tUser {user.user} picked bananas {banana_pickups}")
 
-            if user.endtime is not None:
+            print(
+                f"\tUser {user.user} played from {user.starttime} until {user.endtime}, totaling {play_session_duration}"
+            )
 
-                delta = datetime.datetime.strptime(
-                    user.endtime, USER_TIMESTAMP_FORMAT
-                ) - datetime.datetime.strptime(user.starttime, USER_TIMESTAMP_FORMAT)
-                seconds = delta.total_seconds()
-                seconds %= (
-                    60 * 60
-                )  # remove hours since we know for a fact no-one played for over an hour
-                delta = datetime.timedelta(seconds=seconds)
+            if len(banana_pickups) > 0:
+                average_bananas_per_second = seconds / len(banana_pickups)
+                delta_avg = datetime.timedelta(seconds=average_bananas_per_second)
 
                 print(
-                    f"\tUser {user.user} played from {user.starttime} until {user.endtime}, totaling {delta}"
+                    f"\tUser {user.user} picked on average one banana every {delta_avg}"
                 )
-
-                if len(banana_pickups) > 0:
-                    average_bananas_per_second = seconds / len(banana_pickups)
-                    delta_avg = datetime.timedelta(seconds=average_bananas_per_second)
-
-                    print(
-                        f"\tUser {user.user} picked on average one banana every {delta_avg}"
-                    )
-                else:
-                    print(f"\tUser {user.user} didn't pick any bananas")
-
             else:
-                print(f"\tCannot calculate game duration for user {user.user}")
-                print(
-                    f"\tCannot calculate average banana pick rate for user {user.user}"
-                )
+                print(f"\tUser {user.user} didn't pick any bananas")
 
         print(f"\nBanana pick counts: {banana_pickup_counter}")
+        print(f"\nROI visit counts: {roi_visit_counter}")
 
-        # **Collect user_ids for survey users**
+        # Use this instead of going with 'survey_user_ids' because something unexpected
+
+        # might have happened and we know that these are up to date
         user_ids = list(data.keys())
 
         # Extract event data for these user_ids
-        poslog_df = extract_event_data(session, user_ids)
+        poslog_df = pd.DataFrame(position_data)
+        poslog_df["user_id"] = pd.to_numeric(poslog_df["user_id"], errors="coerce")
 
         # Fetch all userdata for merging
         userdata_query = select(Userdata).where(Userdata.id.in_(user_ids))
         userdata_df = pd.read_sql(userdata_query, sqlite_engine)
 
-        # Associate perspectives
-        merged_df = associate_perspectives(poslog_df, userdata_df)
-        print(merged_df)
-        print(merged_df.columns)
-
-        # Extract banana positions into a DataFrame
-        banana_df = get_banana_positions(bananas)
-        print(banana_df)
+        # Associate perspectives with position logging
+        player_data_pos_df = associate_perspectives(poslog_df, userdata_df)
 
         # Generate and save Heatmaps with Events and Bananas
-        generate_heatmaps(merged_df, banana_df, total_users)
+        generate_heatmaps(player_data_pos_df)
 
 
 if __name__ == "__main__":

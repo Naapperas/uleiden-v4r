@@ -5,3 +5,9 @@ all:
 	pip install -r requirements.txt
 	python src/process.py
 	deactivate
+
+format:
+	@source ./bin/activate
+	pip install -r requirements.txt
+	black .
+	deactivate
