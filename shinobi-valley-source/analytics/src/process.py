@@ -220,7 +220,6 @@ def parse_userdata(
                         _log = PositionLogging(_user_id, timestamp, logline)
                         last_position_log = _log
                         timeseries_logs.append(_log)
-
                     case "TRIGGER_ROI_ENTER":
                         if logline == "Foraging_Banana" and last_position_log:
                             last_logged_position = last_position_log.position
@@ -420,6 +419,7 @@ def main():
         user_ids_for_heatmap = []
         user_stats: list[UserStats] = []
         session_playtimes = []
+        total_bananas_picked = 0
 
         # Process each user's logs
         for user_data in data.values():
@@ -464,6 +464,7 @@ def main():
                         if log.banana_id not in banana_pickup_counter:
                             banana_pickup_counter[log.banana_id] = Counter()
 
+                        total_bananas_picked += 1
                         banana_pickup_counter[log.banana_id][user.perspective] += 1
                     case PositionLogging():
                         position_data.append(
@@ -526,9 +527,14 @@ def main():
             "perspectiveCount": perspective_counter,
             "roiVisitCount": roi_visit_counter,
             "bananaPickupCounts": banana_pickup_counter,
+            "bananaPickupRate": {
+                banana_id: (c.total() / len(user_stats))
+                for (banana_id, c) in banana_pickup_counter.items()
+            },
             "globalCuriosityIndex": sum(global_curiosity_feedback)
             / len(global_curiosity_feedback),
             "averagePlayTimeSeconds": sum(session_playtimes) / len(session_playtimes),
+            "averageTotalBananasPicked": total_bananas_picked / len(user_stats),
         }
         print(
             json.dumps(
