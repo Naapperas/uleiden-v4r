@@ -15,6 +15,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import matplotlib
 import pandas as pd
 import seaborn as sns
+import numpy as np
+from scipy.stats import gaussian_kde
 
 # Use 'Agg' backend for non-interactive environments
 matplotlib.use("Agg")
@@ -297,25 +299,34 @@ def generate_heatmaps(merged_df: pd.DataFrame):
         )
     banana_df = pd.DataFrame(banana_data)
 
-    # Set the aesthetic style of the plots
-    sns.set(style="white")
+    background_image = plt.imread("data/map.jpeg")
 
     # Define a function to plot heatmap and overlay event markers and bananas
     def plot_heatmap(df, title, ax, bananas=None):
+
+        x = df["x"]
+        y = df["z"]
+
+        # These values were obtained by the power of friendship
+        extent = [-134, 131, -130, 134]
+
+        xy = np.vstack([x, y])
+        z = gaussian_kde(xy)(xy)
+
+        ax.imshow(
+            background_image,
+            origin="lower",
+            extent=extent,
+        )
+
         if df.empty:
             ax.set_title(f"{title} (No Data)")
             ax.set_xlabel("X Coordinate")
             ax.set_ylabel("Z Coordinate")
             return
-        sns.kdeplot(
-            x=df["x"],
-            y=df["z"],
-            cmap="Reds",
-            fill=True,
-            thresh=0.05,
-            bw_adjust=0.5,
-            ax=ax,
-        )
+
+        ax.scatter(x, y, c=z, cmap="Reds", s=5)
+
         ax.set_title(title)
         ax.set_xlabel("X Coordinate")
         ax.set_ylabel("Z Coordinate")
@@ -330,6 +341,7 @@ def generate_heatmaps(merged_df: pd.DataFrame):
                 label="Banana",
                 edgecolors="black",
             )
+
         ax.legend()
 
     # Create subplots
