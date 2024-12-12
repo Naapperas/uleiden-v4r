@@ -1,55 +1,70 @@
 {
+    "playerCount": 29,
     "perspectiveCount": {
         "THIRDPERSON": 15,
         "FIRSTPERSON": 14
     },
     "roiVisitCount": {
         "Obstruction_Forest_B": {
-            "THIRDPERSON": 9,
-            "FIRSTPERSON": 4
+            "THIRDPERSON": 7,
+            "FIRSTPERSON": 2
         },
         "OufofPlace_StoneStack_B": {
-            "THIRDPERSON": 7,
-            "FIRSTPERSON": 3
+            "THIRDPERSON": 6,
+            "FIRSTPERSON": 2
         },
         "Connections_HillPath": {
-            "THIRDPERSON": 10,
+            "THIRDPERSON": 8,
             "FIRSTPERSON": 6
         },
         "OufofPlace_StoneSpiral": {
-            "THIRDPERSON": 7,
+            "THIRDPERSON": 5,
             "FIRSTPERSON": 4
         },
         "Obstruction_GroundFog": {
             "THIRDPERSON": 6,
-            "FIRSTPERSON": 14
+            "FIRSTPERSON": 8
         },
         "OufofPlace_StoneStack_A": {
-            "FIRSTPERSON": 10,
-            "THIRDPERSON": 10
+            "FIRSTPERSON": 9,
+            "THIRDPERSON": 9
         },
         "Extreme_Mountain_B": {
-            "THIRDPERSON": 14,
-            "FIRSTPERSON": 27
+            "THIRDPERSON": 6,
+            "FIRSTPERSON": 7
         },
         "Extreme_Mountain_C": {
             "THIRDPERSON": 4,
-            "FIRSTPERSON": 5
+            "FIRSTPERSON": 4
         },
         "Connections_CliffCave": {
-            "THIRDPERSON": 9,
-            "FIRSTPERSON": 9
+            "THIRDPERSON": 7,
+            "FIRSTPERSON": 7
         },
         "Extreme_Mountain_A": {
-            "FIRSTPERSON": 10,
-            "THIRDPERSON": 4
+            "FIRSTPERSON": 7,
+            "THIRDPERSON": 3
         },
         "Obstruction_Forest_A": {
             "FIRSTPERSON": 4
         },
         "Connections_MountainCave": {
-            "THIRDPERSON": 4
+            "THIRDPERSON": 3
         }
+    },
+    "roiVisitRate": {
+        "Obstruction_Forest_B": 0.3103448275862069,
+        "OufofPlace_StoneStack_B": 0.27586206896551724,
+        "Connections_HillPath": 0.4827586206896552,
+        "OufofPlace_StoneSpiral": 0.3103448275862069,
+        "Obstruction_GroundFog": 0.4827586206896552,
+        "OufofPlace_StoneStack_A": 0.6206896551724138,
+        "Extreme_Mountain_B": 0.4482758620689655,
+        "Extreme_Mountain_C": 0.27586206896551724,
+        "Connections_CliffCave": 0.4827586206896552,
+        "Extreme_Mountain_A": 0.3448275862068966,
+        "Obstruction_Forest_A": 0.13793103448275862,
+        "Connections_MountainCave": 0.10344827586206896
     },
     "bananaPickupCounts": {
         "6": {
@@ -99,6 +114,10 @@
         "8": 0.27586206896551724,
         "7": 0.3103448275862069,
         "4": 0.3448275862068966
+    },
+    "averageCuriosityIndexPerPerspective": {
+        "THIRDPERSON": 0.6276190476190476,
+        "FIRSTPERSON": 0.6223636363636363
     },
     "globalCuriosityIndex": 0.624639175257732,
     "averagePlayTimeSeconds": 675.5862068965517,

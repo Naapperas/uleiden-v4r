@@ -209,7 +209,11 @@ def parse_userdata(
             if possible_endtime is not None:
                 _user.endtime = possible_endtime.strftime(USER_TIMESTAMP_FORMAT)
             else:  # heuristic to have a rough estimate of the total play-time, just use the last log's timestamp
-                _user.endtime = timeseries_data[-1].timestamp
+                if len(timeseries_data) > 0:
+                    _user.endtime = timeseries_data[-1].timestamp
+                else:
+                    # use the start time. Since we filter play sessions whose duration is less than 5 minutes it is ok
+                    _user.endtime = _user.starttime
 
         for timeseries_log in timeseries_data:
             logtype = timeseries_log.logtype
@@ -405,6 +409,8 @@ def main():
             "C22A0327": None,
             "7243788C": datetime.datetime(2024, 12, 3, 15, 18),
             "7F281BBB": datetime.datetime(2024, 12, 5, 11, 19),
+            "C049FEDD": None,
+            "26BBE9F1": None,
         }
 
         # Initialize an empty dictionary to hold user data
@@ -414,6 +420,7 @@ def main():
         users_query = select(Userdata).where(
             Userdata.user.in_(survey_usernames_with_endtimes)
         )
+        # users_query = select(Userdata)
         users_result = session.execute(users_query)
         users = users_result.scalars().all()
 
@@ -432,6 +439,9 @@ def main():
         user_stats: list[UserStats] = []
         session_playtimes = []
         total_bananas_picked = 0
+        curiosity_per_perspective = {}
+
+        user_roi_visits: set[tuple[str, str]] = set()
 
         # Process each user's logs
         for user_data in data.values():
@@ -490,12 +500,23 @@ def main():
                         if log.roi_name not in roi_visit_counter:
                             roi_visit_counter[log.roi_name] = Counter()
 
+                        if (user.user, log.roi_name) in user_roi_visits:
+                            continue
+
                         roi_visit_counter[log.roi_name][user.perspective] += 1
+                        user_roi_visits.add((user.user, log.roi_name))
                     case Curiosity():
                         curiosity_value = log.curiosity
 
                         curiosity_feedback.append(curiosity_value)
                         global_curiosity_feedback.append(curiosity_value)
+
+                        if user.perspective not in curiosity_per_perspective:
+                            curiosity_per_perspective[user.perspective] = []
+
+                        curiosity_per_perspective[user.perspective].append(
+                            curiosity_value
+                        )
 
             stats = UserStats(
                 user_id=user.id,
@@ -536,12 +557,21 @@ def main():
         generate_heatmaps(player_data_pos_df)
 
         global_stats = {
+            "playerCount": len(user_stats),
             "perspectiveCount": perspective_counter,
             "roiVisitCount": roi_visit_counter,
+            "roiVisitRate": {
+                roi_name: (c.total() / len(user_stats))
+                for (roi_name, c) in roi_visit_counter.items()
+            },
             "bananaPickupCounts": banana_pickup_counter,
             "bananaPickupRate": {
                 banana_id: (c.total() / len(user_stats))
                 for (banana_id, c) in banana_pickup_counter.items()
+            },
+            "averageCuriosityIndexPerPerspective": {
+                perspective: sum(curiosities) / len(curiosities)
+                for (perspective, curiosities) in curiosity_per_perspective.items()
             },
             "globalCuriosityIndex": sum(global_curiosity_feedback)
             / len(global_curiosity_feedback),
